@@ -26,20 +26,27 @@
     <OutputPath>bin\Release</OutputPath>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <ConsolePause>false</ConsolePause>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Externalconsole>true</Externalconsole>
+    <Commandlineparameters>-file=config.cfg</Commandlineparameters>
   </PropertyGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Util\ArgParser.cs" />
     <Compile Include="Util\Log.cs" />
+    <Compile Include="IRC\IrcClient.cs" />
+    <Compile Include="Util\Extensions.cs" />
+    <Compile Include="IRC\AClientHandler.cs" />
+    <Compile Include="IRC\Twitch\TwitchHandler.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Util\" />
+    <Folder Include="IRC\" />
+    <Folder Include="IRC\Twitch\" />
   </ItemGroup>
   <ProjectExtensions>
     <MonoDevelop>

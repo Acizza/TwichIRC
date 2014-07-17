@@ -23,7 +23,7 @@ namespace TwitchIRC
 		{
 			foreach(var arg in args)
 			{
-				var match = Regex.Match(arg, @"--?(\w+)\s*=\s*(.+)");
+				var match = Regex.Match(arg, @"--?(\w+)\s*?=\s*?(.+)");
 
 				if(!match.Success)
 				{
@@ -31,7 +31,7 @@ namespace TwitchIRC
 					continue;
 				}
 
-				var key = match.Groups[0].Captures[0].Value;
+				var key = match.Groups[1].Captures[0].Value;
 
 				if(!Callbacks.ContainsKey(key))
 				{
@@ -39,7 +39,7 @@ namespace TwitchIRC
 					continue;
 				}
 
-				Callbacks[key].Invoke(match.Groups[1].Captures[0].Value);
+				Callbacks[key].Invoke(match.Groups[2].Captures[0].Value);
 			}
 		}
 	}
