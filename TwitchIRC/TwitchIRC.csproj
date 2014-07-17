@@ -17,9 +17,10 @@
     <DefineConstants>DEBUG;</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <ConsolePause>false</ConsolePause>
     <PlatformTarget>x86</PlatformTarget>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Externalconsole>true</Externalconsole>
+    <Commandlineparameters>-file=config.cfg</Commandlineparameters>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <Optimize>true</Optimize>
@@ -39,6 +40,7 @@
     <Compile Include="Util\Extensions.cs" />
     <Compile Include="IRC\AClientHandler.cs" />
     <Compile Include="IRC\Twitch\TwitchHandler.cs" />
+    <Compile Include="IRC\ACommandHandler.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />

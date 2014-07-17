@@ -10,7 +10,7 @@ namespace TwitchIRC
 	{
 		public Socket Socket { get; private set; }
 		public List<string> Channels { get; private set; }
-		public AClientHandler ClientHandler { get; set; }
+		public AClientHandler ClientHandler;
 
 		public bool Alive { get { return Socket != null && Socket.Connected; } }
 
@@ -120,7 +120,7 @@ namespace TwitchIRC
 
 		public void Close()
 		{
-			if(Socket != null && Socket.Connected)
+			if(Alive)
 			{
 				Disconnect();
 				Shutdown();
