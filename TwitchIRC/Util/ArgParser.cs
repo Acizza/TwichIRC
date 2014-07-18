@@ -23,7 +23,7 @@ namespace TwitchIRC
 		{
 			foreach(var arg in args)
 			{
-				var match = Regex.Match(arg, @"--?(\w+)\s*?=\s*?(.+)");
+				var match = Regex.Match(arg, @"--?(\w+)\s*=\s*(.+)");
 
 				if(!match.Success)
 				{

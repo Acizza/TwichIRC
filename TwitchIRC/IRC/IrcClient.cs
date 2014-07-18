@@ -12,7 +12,10 @@ namespace TwitchIRC
 		public List<string> Channels { get; private set; }
 		public AClientHandler ClientHandler;
 
+		string user;
+
 		public bool Alive { get { return Socket != null && Socket.Connected; } }
+		public string User { get { return user; } }
 
 		public IrcClient(AClientHandler handler)
 		{
@@ -20,6 +23,7 @@ namespace TwitchIRC
 
 			ClientHandler = handler;
 			ClientHandler.Client = this;
+			ClientHandler.PostInit();
 		}
 
 		public IrcClient(AClientHandler handler, string host, int port, string user, string pass)
@@ -39,17 +43,17 @@ namespace TwitchIRC
 			SendLine("NICK " + user);
 			SendLine("USER " + user + " 8 * :Bot");
 
-			if(ConfirmConnection())
-			{
-				Log.Info("Success");
-			}
-			else
+			if(!ConfirmConnection())
 			{
 				Log.Error("Failed to connect to " + host + ":" + port.ToString());
 				Shutdown();
 
 				return;
 			}
+
+			this.user = user;
+
+			ClientHandler.OnConnect(user, host, port);
 
 			new Thread(Update).Start();
 		}
@@ -86,8 +90,40 @@ namespace TwitchIRC
 				while((data = ReadLine()) != null)
 				{
 					foreach(var line in data.Split('\n'))
-						ClientHandler.ProcessLine(line);
+						ProcessLine(line + '\n');
 				}
+			}
+		}
+
+		void ProcessLine(string line)
+		{
+			if(line.StartsWith("PING "))
+			{
+				SendLine("PONG " + line.Substring("PING ".Length));
+				return;
+			}
+
+			string type = line.Range(" ", " ");
+			string user = line.Range(":", "!");
+			string channel = line.Range("#", new [] { " ", "\n" });
+
+			switch(type)
+			{
+				case "PRIVMSG":
+					ClientHandler.OnMessage(user, channel, line.Range(" :", "\n", 2));
+					break;
+
+				case "JOIN":
+					ClientHandler.OnJoin(user, channel);
+					break;
+
+				case "PART":
+					ClientHandler.OnLeave(user, channel);
+					break;
+
+				default:
+					ClientHandler.OnUnknown(line);
+					break;
 			}
 		}
 
@@ -102,6 +138,12 @@ namespace TwitchIRC
 		public void SendLine(string line)
 		{
 			Socket.Send(Encoding.ASCII.GetBytes(line + '\n'));
+		}
+
+		public void Join(string channel)
+		{
+			Channels.Add(channel);
+			SendLine("JOIN #" + channel);
 		}
 
 		public void Disconnect()

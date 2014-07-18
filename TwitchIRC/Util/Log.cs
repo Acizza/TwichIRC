@@ -4,26 +4,19 @@ namespace TwitchIRC
 {
 	public static class Log
 	{
-		static void Write(string type, string msg, ConsoleColor color)
-		{
-			Console.ForegroundColor = color;
-			Console.WriteLine(type + ": " + msg);
-			Console.ResetColor();
-		}
-
 		public static void Info(string msg)
 		{
-			Write("INFO", msg, ConsoleColor.Gray);
+			ConsoleUtil.WriteLine(ConsoleColor.Gray, "INFO: " + msg);
 		}
 
 		public static void Warning(string msg)
 		{
-			Write("WARNING", msg, ConsoleColor.Yellow);
+			ConsoleUtil.WriteLine(ConsoleColor.Yellow, "WARNING: " + msg);
 		}
 
 		public static void Error(string msg)
 		{
-			Write("ERROR", msg, ConsoleColor.Red);
+			ConsoleUtil.WriteLine(ConsoleColor.Red, "ERROR: " + msg);
 		}
 	}
 }

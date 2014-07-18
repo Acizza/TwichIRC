@@ -26,7 +26,7 @@ namespace TwitchIRC
 			parser.Parse(args);
 
 			if(username != null && oauth != null) // Temporary
-				client.Connect("irc.twitch.tv", 6667, username, oauth);
+				client.Connect("199.9.252.120", 6667, username, oauth);
 
 			ReadInput();
 		}

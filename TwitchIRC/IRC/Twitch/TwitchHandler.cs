@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom.Compiler;
 
 namespace TwitchIRC
 {
@@ -9,9 +10,38 @@ namespace TwitchIRC
 			CommandHandler = new TwitchCommands();
 		}
 
-		public override void ProcessLine(string line)
+		public override void PostInit()
 		{
-			Console.WriteLine(line);
+		}
+
+		public override void OnConnect(string user, string host, int port)
+		{
+			ConsoleUtil.WriteLine(ConsoleColor.DarkGreen, "Connected as " + user);
+		}
+
+		public override void OnJoin(string user, string channel)
+		{
+			ConsoleUtil.WriteLine(ConsoleColor.DarkMagenta, user + " joined " + channel);
+		}
+
+		public override void OnMessage(string user, string channel, string msg)
+		{
+			ConsoleUtil.WriteLine(ConsoleColor.DarkCyan, "<" + channel + "> " + user + ": " + msg);
+		}
+
+		public override void OnLeave(string user, string channel)
+		{
+			ConsoleUtil.WriteLine(ConsoleColor.DarkRed, user + " left " + channel);
+		}
+
+		public override void OnDisconnect(string user)
+		{
+
+		}
+
+		public override void OnUnknown(string line)
+		{
+			Console.WriteLine("UNKNOWN: " + line);
 		}
 	}
 
@@ -19,12 +49,6 @@ namespace TwitchIRC
 	{
 		public TwitchCommands() : base()
 		{
-		}
-
-		[Command("test", 1, "Test command.")]
-		public void TestCommand(string[] args)
-		{
-			Console.WriteLine("TEST: " + args[0]);
 		}
 
 		[Command("help", 1, "Command help.")]
@@ -40,11 +64,64 @@ namespace TwitchIRC
 
 			if(string.IsNullOrEmpty(command.Desc))
 			{
-				Log.Warning(command.Name + " has no description.");
+				Log.Info(command.Name + " has no description.");
 				return;
 			}
 
-			Console.WriteLine(command.Desc);
+			ConsoleUtil.WriteLine(ConsoleColor.Magenta, command.Desc);
+		}
+
+		[Command("commands", 0, "Lists all commands.")]
+		public void CommandsCommand(string[] args)
+		{
+			uint index = 0;
+
+			foreach(var iter in Commands)
+			{
+				++index;
+
+				ConsoleUtil.Write(ConsoleColor.Red, index.ToString() + ". ");
+				ConsoleUtil.WriteLine(ConsoleColor.Gray, iter.Key.Name);
+			}
+		}
+
+		[Command("exit", 0, "Exits.")]
+		public void ExitCommand(string[] args)
+		{
+			Environment.Exit(0);
+		}
+
+		[Command("close", 0, "Exits.")]
+		public void CloseCommand(string[] args)
+		{
+			ExitCommand(null);
+		}
+
+		[Command("join", 1, "Joins channel. Multiple channels can be specified with spaces.")]
+		public void JoinCommand(string[] args)
+		{
+			foreach(var arg in args)
+				Program.Handler.Client.Join(arg);
+		}
+
+		[Command("channels", 0, "Lists all connected channels.")]
+		public void ChannelsCommand(string[] args)
+		{
+			if(Program.Handler.Client.Channels.Count < 1)
+			{
+				Log.Error("Not connected to any channels.");
+				return;
+			}
+
+			uint index = 0;
+
+			foreach(var channel in Program.Handler.Client.Channels)
+			{
+				++index;
+
+				ConsoleUtil.Write(ConsoleColor.Red, index.ToString() + ". ");
+				ConsoleUtil.WriteLine(ConsoleColor.Gray, channel);
+			}
 		}
 	}
 }
