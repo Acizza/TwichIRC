@@ -90,7 +90,10 @@ namespace TwitchIRC
 				while((data = ReadLine()) != null)
 				{
 					foreach(var line in data.Split('\n'))
-						ProcessLine(line + '\n');
+					{
+						if(!string.IsNullOrEmpty(line))
+							ProcessLine(line + '\0');
+					}
 				}
 			}
 		}
@@ -105,12 +108,12 @@ namespace TwitchIRC
 
 			string type = line.Range(" ", " ");
 			string user = line.Range(":", "!");
-			string channel = line.Range("#", new [] { " ", "\n" });
+			string channel = line.Range("#", new [] { " ", "\0" });
 
 			switch(type)
 			{
 				case "PRIVMSG":
-					ClientHandler.OnMessage(user, channel, line.Range(" :", "\n", 2));
+					ClientHandler.OnMessage(user, channel, line.Range(" :", "\0", 2));
 					break;
 
 				case "JOIN":
@@ -130,9 +133,9 @@ namespace TwitchIRC
 		public string ReadLine()
 		{
 			byte[] buffer = new byte[512];
-			Socket.Receive(buffer);
+			int read = Socket.Receive(buffer);
 
-			return Encoding.ASCII.GetString(buffer);
+			return Encoding.ASCII.GetString(buffer).Substring(0, read);
 		}
 
 		public void SendLine(string line)
@@ -146,12 +149,19 @@ namespace TwitchIRC
 			SendLine("JOIN #" + channel);
 		}
 
+		public void Leave(string channel)
+		{
+			Channels.Remove(channel);
+			SendLine("PART #" + channel);
+		}
+
 		public void Disconnect()
 		{
 			foreach(var channel in Channels)
 				SendLine("PART #" + channel);
 
 			SendLine("QUIT :Bot disconnect");
+			Channels.Clear();
 		}
 
 		public void Shutdown()

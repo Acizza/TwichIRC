@@ -3,8 +3,6 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 
-// TODO: Refactor.
-
 namespace TwitchIRC
 {
 	public class Program
@@ -16,19 +14,30 @@ namespace TwitchIRC
 			string username = null;
 			string oauth    = null;
 
-			var client = new IrcClient(Handler = new TwitchHandler());
-			var parser = new ArgParser();
+			try
+			{
+				var client = new IrcClient(Handler = new TwitchHandler());
+				var parser = new ArgParser();
 
-			parser.Add("file",     v => parser.Parse(File.ReadAllLines(v)));
-			parser.Add("username", v => username = v);
-			parser.Add("oauth",    v => oauth = v);
+				parser.Add("file",     v => parser.Parse(File.ReadAllLines(v)));
+				parser.Add("username", v => username = v);
+				parser.Add("oauth",    v => oauth = v);
 
-			parser.Parse(args);
+				parser.Parse(args);
 
-			if(username != null && oauth != null) // Temporary
-				client.Connect("199.9.252.120", 6667, username, oauth);
+				if(username != null && oauth != null) // Temporary
+					client.Connect("199.9.252.120", 6667, username, oauth);
 
-			ReadInput();
+				ReadInput();
+			}
+			catch(Exception e)
+			{
+				#if DEBUG
+				Log.Error(e.ToString());
+				#else
+				Log.Error(e.Message + "\n" + e.StackTrace);
+				#endif
+			}
 		}
 
 		static void ReadInput()

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.CodeDom.Compiler;
 
 namespace TwitchIRC
 {
@@ -26,6 +25,9 @@ namespace TwitchIRC
 
 		public override void OnMessage(string user, string channel, string msg)
 		{
+			if(msg.StartsWith("HISTORYEND ") || msg.StartsWith("USERCOLOR ") || msg.StartsWith("SPECIALUSER "))
+				return;
+
 			ConsoleUtil.WriteLine(ConsoleColor.DarkCyan, "<" + channel + "> " + user + ": " + msg);
 		}
 
@@ -41,7 +43,9 @@ namespace TwitchIRC
 
 		public override void OnUnknown(string line)
 		{
+			#if DEBUG
 			Console.WriteLine("UNKNOWN: " + line);
+			#endif
 		}
 	}
 
@@ -109,7 +113,7 @@ namespace TwitchIRC
 		{
 			if(Program.Handler.Client.Channels.Count < 1)
 			{
-				Log.Error("Not connected to any channels.");
+				Log.Warning("Not connected to any channels.");
 				return;
 			}
 
@@ -121,6 +125,21 @@ namespace TwitchIRC
 
 				ConsoleUtil.Write(ConsoleColor.Red, index.ToString() + ". ");
 				ConsoleUtil.WriteLine(ConsoleColor.Gray, channel);
+			}
+		}
+
+		[Command("leave", 1, "Leaves channel. Multiple channels can be specified with spaces.")]
+		public void LeaveCommand(string[] args)
+		{
+			foreach(var arg in args)
+			{
+				if(!Program.Handler.Client.Channels.Contains(arg))
+				{
+					Log.Warning("Not connected to channel: " + arg);
+					continue;
+				}
+
+				Program.Handler.Client.Leave(arg);
 			}
 		}
 	}
