@@ -2,6 +2,7 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace TwitchIRC
 {
@@ -64,7 +65,19 @@ namespace TwitchIRC
 
 				if(funcArgs.Length < command.MinArgs)
 				{
-					Log.Error(command.MinArgs + " args expected. Got " + funcArgs.Length);
+					var builder = new StringBuilder();
+
+					builder.Append(command.MinArgs);
+					builder.Append(" args expected. Got ");
+					builder.Append(funcArgs.Length);
+
+					if(!string.IsNullOrEmpty(command.ArgDesc))
+					{
+						builder.Append("\nUsage: ");
+						builder.Append(command.ArgDesc);
+					}
+
+					Log.Error(builder.ToString());
 					continue;
 				}
 

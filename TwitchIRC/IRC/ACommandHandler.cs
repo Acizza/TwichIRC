@@ -47,13 +47,15 @@ namespace TwitchIRC
 	public class Command : Attribute
 	{
 		public string Name { get; private set; }
+		public string ArgDesc { get; private set; }
 		public string Desc { get; private set; }
 		public uint MinArgs { get; private set; }
 
-		public Command(string name, uint minArgs = 0, string desc = "")
+		public Command(string name, uint minArgs = 0, string argDesc = "", string desc = "")
 		{
 			Name = name;
 			Desc = desc;
+			ArgDesc = argDesc;
 			MinArgs = minArgs;
 		}
 	}

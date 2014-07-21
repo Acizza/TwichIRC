@@ -28,7 +28,9 @@ namespace TwitchIRC
 			if(msg.StartsWith("HISTORYEND ") || msg.StartsWith("USERCOLOR ") || msg.StartsWith("SPECIALUSER "))
 				return;
 
-			ConsoleUtil.WriteLine(ConsoleColor.DarkCyan, "<" + channel + "> " + user + ": " + msg);
+			ConsoleUtil.Write(ConsoleColor.DarkYellow, "<" + channel + "> ");
+			ConsoleUtil.Write(ConsoleColor.DarkRed, user);
+			ConsoleUtil.WriteLine(ConsoleColor.White, ": " + msg);
 		}
 
 		public override void OnLeave(string user, string channel)
@@ -55,7 +57,7 @@ namespace TwitchIRC
 		{
 		}
 
-		[Command("help", 1, "Command help.")]
+		[Command("help", 1, "<command>", "Command help.")]
 		public void HelpCommand(string[] args)
 		{
 			var command = GetCommandIndex(args[0]).Key;
@@ -75,7 +77,7 @@ namespace TwitchIRC
 			ConsoleUtil.WriteLine(ConsoleColor.Magenta, command.Desc);
 		}
 
-		[Command("commands", 0, "Lists all commands.")]
+		[Command("commands", 0, "", "Lists all commands.")]
 		public void CommandsCommand(string[] args)
 		{
 			uint index = 0;
@@ -89,26 +91,26 @@ namespace TwitchIRC
 			}
 		}
 
-		[Command("exit", 0, "Exits.")]
+		[Command("exit", 0, "", "Exits.")]
 		public void ExitCommand(string[] args)
 		{
 			Environment.Exit(0);
 		}
 
-		[Command("close", 0, "Exits.")]
+		[Command("close", 0, "", "Exits.")]
 		public void CloseCommand(string[] args)
 		{
 			ExitCommand(null);
 		}
 
-		[Command("join", 1, "Joins channel. Multiple channels can be specified with spaces.")]
+		[Command("join", 1, "<channels>", "Joins channel. Multiple channels can be specified with spaces.")]
 		public void JoinCommand(string[] args)
 		{
 			foreach(var arg in args)
 				Program.Handler.Client.Join(arg);
 		}
 
-		[Command("channels", 0, "Lists all connected channels.")]
+		[Command("channels", 0, "", "Lists all connected channels.")]
 		public void ChannelsCommand(string[] args)
 		{
 			if(Program.Handler.Client.Channels.Count < 1)
@@ -128,7 +130,7 @@ namespace TwitchIRC
 			}
 		}
 
-		[Command("leave", 1, "Leaves channel. Multiple channels can be specified with spaces.")]
+		[Command("leave", 1, "<channels>", "Leaves channel. Multiple channels can be specified with spaces.")]
 		public void LeaveCommand(string[] args)
 		{
 			foreach(var arg in args)
