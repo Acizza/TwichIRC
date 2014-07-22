@@ -40,7 +40,6 @@
     <Compile Include="Util\Extensions.cs" />
     <Compile Include="IRC\AClientHandler.cs" />
     <Compile Include="IRC\Twitch\TwitchHandler.cs" />
-    <Compile Include="IRC\ACommandHandler.cs" />
     <Compile Include="Util\ConsoleUtil.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -1,16 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Linq;
 
 namespace TwitchIRC
 {
 	public class TwitchHandler : AClientHandler
 	{
+		public Dictionary<string, UserData> UserStats { get; private set; }
+
 		public TwitchHandler()
 		{
-			CommandHandler = new TwitchCommands();
-		}
-
-		public override void PostInit()
-		{
+			UserStats = new Dictionary<string, UserData>();
 		}
 
 		public override void OnConnect(string user, string host, int port)
@@ -27,6 +28,21 @@ namespace TwitchIRC
 		{
 			if(msg.StartsWith("HISTORYEND ") || msg.StartsWith("USERCOLOR ") || msg.StartsWith("SPECIALUSER "))
 				return;
+
+			if(UserStats.ContainsKey(user))
+			{
+				var stats = UserStats[user];
+
+				++stats.MessageCount;
+				float sum = 0;
+
+				foreach(var time in stats.MessageTimes)
+					sum += (float)time.TotalSeconds;
+
+				stats.AvgMessages = sum / stats.MessageTimes.Count;
+				stats.AddMessageTime(DateTime.Now - stats.LastMsgTime);
+				stats.LastMsgTime = DateTime.Now;
+			}
 
 			ConsoleUtil.Write(ConsoleColor.DarkYellow, "<" + channel + "> ");
 			ConsoleUtil.Write(ConsoleColor.DarkRed, user);
@@ -48,47 +64,6 @@ namespace TwitchIRC
 			#if DEBUG
 			Console.WriteLine("UNKNOWN: " + line);
 			#endif
-		}
-	}
-
-	public class TwitchCommands : ACommandHandler
-	{
-		public TwitchCommands() : base()
-		{
-		}
-
-		[Command("help", 1, "<command>", "Command help.")]
-		public void HelpCommand(string[] args)
-		{
-			var command = GetCommandIndex(args[0]).Key;
-
-			if(command == null)
-			{
-				Log.Error("Unknown command: " + args[0]);
-				return;
-			}
-
-			if(string.IsNullOrEmpty(command.Desc))
-			{
-				Log.Info(command.Name + " has no description.");
-				return;
-			}
-
-			ConsoleUtil.WriteLine(ConsoleColor.Magenta, command.Desc);
-		}
-
-		[Command("commands", 0, "", "Lists all commands.")]
-		public void CommandsCommand(string[] args)
-		{
-			uint index = 0;
-
-			foreach(var iter in Commands)
-			{
-				++index;
-
-				ConsoleUtil.Write(ConsoleColor.Red, index.ToString() + ". ");
-				ConsoleUtil.WriteLine(ConsoleColor.Gray, iter.Key.Name);
-			}
 		}
 
 		[Command("exit", 0, "", "Exits.")]
@@ -143,6 +118,60 @@ namespace TwitchIRC
 
 				Program.Handler.Client.Leave(arg);
 			}
+		}
+
+		[Command("track", 1, "<users>", "Tracks a user for statistics. You can poll information by typing stats <name>.")]
+		public void TrackCommand(string[] args)
+		{
+			foreach(var arg in args)
+				UserStats.Add(arg, new UserData(30));
+		}
+
+		[Command("stats", 1, "<user>", "Grabs stats for a specific user.")]
+		public void StatsCommand(string[] args)
+		{
+			var user = args[0];
+
+			if(!UserStats.ContainsKey(user))
+			{
+				Log.Warning(user + " is not being tracked. Track them with track <name>.");
+				return;
+			}
+
+			var stats   = UserStats[user];
+			var builder = new StringBuilder();
+
+			builder.Append("Messages: " + stats.MessageCount);
+			builder.Append(string.Format("\nTime between messages: {0:N2} seconds", stats.AvgMessages));
+			builder.Append(string.Format("\nLast message: {0:N2} seconds", stats.MessageTimes.Last().TotalSeconds));
+
+			ConsoleUtil.WriteLine(ConsoleColor.DarkMagenta, builder.ToString());
+		}
+	}
+
+	public class UserData
+	{
+		public uint     MessageCount;
+		public List<TimeSpan> MessageTimes { get; private set; }
+		public float    AvgMessages;
+		public DateTime LastMsgTime;
+
+		public int MaxMessageAverages { get; private set; }
+
+		public UserData(int maxMessageAverages)
+		{
+			MaxMessageAverages = maxMessageAverages;
+			MessageTimes = new List<TimeSpan>(maxMessageAverages);
+
+			LastMsgTime = DateTime.Now;
+		}
+
+		public void AddMessageTime(TimeSpan span)
+		{
+			MessageTimes.Add(span);
+
+			if(MessageTimes.Count >= MaxMessageAverages)
+				MessageTimes.RemoveAt(0);
 		}
 	}
 }

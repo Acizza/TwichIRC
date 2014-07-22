@@ -52,7 +52,7 @@ namespace TwitchIRC
 				if(args.Length < 1)
 					continue;
 
-				var iter = Handler.CommandHandler.GetCommandIndex(args[0].ToLower());
+				var iter = Handler.GetCommandIndex(args[0].ToLower());
 				var command = iter.Key;
 
 				if(command == null)

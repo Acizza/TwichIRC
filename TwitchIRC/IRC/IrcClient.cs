@@ -110,6 +110,16 @@ namespace TwitchIRC
 			string user = line.Range(":", "!");
 			string channel = line.Range("#", new [] { " ", "\0" });
 
+			if(type == null || user == null || channel == null)
+			{
+				#if DEBUG
+				Log.Error("NULL data for line: " + line);
+				#endif
+
+				ClientHandler.OnUnknown(line);
+				return;
+			}
+
 			switch(type)
 			{
 				case "PRIVMSG":
