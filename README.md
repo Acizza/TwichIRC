@@ -16,4 +16,4 @@ config.cfg:
 -oauth = oauth:12345
 ```
 
-Using config files is not required, and launching the executable without any parameters will just require you to login manually (login <username> <oauth>).
+Using config files is not required, and launching the executable without any parameters will just require you to login manually (login [username] [oauth]).
