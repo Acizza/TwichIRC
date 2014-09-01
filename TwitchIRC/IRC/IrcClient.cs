@@ -10,6 +10,8 @@ namespace TwitchIRC
 	{
 		public Socket Socket { get; private set; }
 		public List<string> Channels { get; private set; }
+		public string Host { get; private set; }
+		public int Port { get; private set; }
 		public AClientHandler ClientHandler;
 
 		public bool Alive
@@ -52,6 +54,11 @@ namespace TwitchIRC
 			Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 			Socket.Connect(host, port);
 
+			Host = host;
+			Port = port;
+
+			mUser = user;
+
 			SendLine("PASS " + pass);
 			SendLine("NICK " + user);
 			SendLine("USER " + user + " 8 * :Bot");
@@ -64,7 +71,6 @@ namespace TwitchIRC
 				return;
 			}
 
-			mUser = user;
 			ClientHandler.OnConnect(user, host, port);
 
 			new Thread(Update).Start();
@@ -155,7 +161,22 @@ namespace TwitchIRC
 		public string ReadLine()
 		{
 			byte[] buffer = new byte[512];
-			int read = Socket.Receive(buffer);
+			int read = 0;
+
+			#pragma warning disable 0168
+
+			try
+			{
+				read = Socket.Receive(buffer);
+			}
+			catch(Exception e)
+			{
+				#if DEBUG
+				Log.Error(e.ToString());
+				#endif
+			}
+
+			#pragma warning restore 0168
 
 			return Encoding.ASCII.GetString(buffer).Substring(0, read);
 		}

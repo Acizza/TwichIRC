@@ -78,9 +78,34 @@ namespace TwitchIRC
 			ExitCommand(null);
 		}
 
+		[Command("login", 2, "<username> <oauth>", "Login as <username>.")]
+		public void LoginCommand(string[] args)
+		{
+			Client.Connect(Client.Host, Client.Port, args[0], args[1]);
+		}
+
+		[Command("logout", 0)]
+		public void LogoutCommand(string[] args)
+		{
+			if(!Client.Alive)
+			{
+				Log.Warning("Not logged in.");
+				return;
+			}
+
+			Client.Close();
+			Log.Info(Client.User + " logged out.");
+		}
+
 		[Command("join", 1, "<channels>", "Joins channel. Multiple channels can be specified with spaces.")]
 		public void JoinCommand(string[] args)
 		{
+			if(!Client.Alive)
+			{
+				Log.Warning("Not logged in.");
+				return;
+			}
+
 			foreach(var arg in args)
 			{
 				if(Client.Channels.Contains(arg))
@@ -116,6 +141,12 @@ namespace TwitchIRC
 		[Command("leave", 1, "<channels>", "Leaves channel. Multiple channels can be specified with spaces.")]
 		public void LeaveCommand(string[] args)
 		{
+			if(!Client.Alive)
+			{
+				Log.Warning("Not logged in.");
+				return;
+			}
+
 			foreach(var arg in args)
 			{
 				if(!Client.Channels.Contains(arg))
@@ -131,6 +162,12 @@ namespace TwitchIRC
 		[Command("track", 1, "<users>", "Tracks a user for statistics. You can poll information by typing stats <name>.")]
 		public void TrackCommand(string[] args)
 		{
+			if(!Client.Alive)
+			{
+				Log.Warning("Not logged in.");
+				return;
+			}
+
 			foreach(var arg in args)
 				UserStats.Add(arg, new UserData(30));
 		}
@@ -138,6 +175,12 @@ namespace TwitchIRC
 		[Command("stats", 1, "<user>", "Grabs stats for a specific user.")]
 		public void StatsCommand(string[] args)
 		{
+			if(!Client.Alive)
+			{
+				Log.Warning("Not logged in.");
+				return;
+			}
+
 			var user = args[0];
 
 			if(!UserStats.ContainsKey(user))
