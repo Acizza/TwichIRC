@@ -82,13 +82,21 @@ namespace TwitchIRC
 		public void JoinCommand(string[] args)
 		{
 			foreach(var arg in args)
-				Program.Handler.Client.Join(arg);
+			{
+				if(Client.Channels.Contains(arg))
+				{
+					Log.Warning("Already connected to channel " + arg);
+					continue;
+				}
+
+				Client.Join(arg);
+			}
 		}
 
 		[Command("channels", 0, "", "Lists all connected channels.")]
 		public void ChannelsCommand(string[] args)
 		{
-			if(Program.Handler.Client.Channels.Count < 1)
+			if(Client.Channels.Count < 1)
 			{
 				Log.Warning("Not connected to any channels.");
 				return;
@@ -96,7 +104,7 @@ namespace TwitchIRC
 
 			uint index = 0;
 
-			foreach(var channel in Program.Handler.Client.Channels)
+			foreach(var channel in Client.Channels)
 			{
 				++index;
 
@@ -110,7 +118,7 @@ namespace TwitchIRC
 		{
 			foreach(var arg in args)
 			{
-				if(!Program.Handler.Client.Channels.Contains(arg))
+				if(!Client.Channels.Contains(arg))
 				{
 					Log.Warning("Not connected to channel: " + arg);
 					continue;
@@ -143,7 +151,7 @@ namespace TwitchIRC
 
 			builder.Append("Messages: " + stats.MessageCount);
 			builder.Append(string.Format("\nTime between messages: {0:N2} seconds", stats.AvgMessages));
-			builder.Append(string.Format("\nLast message: {0:N2} seconds", stats.MessageTimes.Last().TotalSeconds));
+			builder.Append(string.Format("\nTime between last message: {0:N2} seconds", stats.MessageTimes.Last().TotalSeconds));
 
 			ConsoleUtil.WriteLine(ConsoleColor.DarkMagenta, builder.ToString());
 		}

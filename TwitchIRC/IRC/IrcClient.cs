@@ -12,10 +12,23 @@ namespace TwitchIRC
 		public List<string> Channels { get; private set; }
 		public AClientHandler ClientHandler;
 
-		string user;
+		public bool Alive
+		{
+			get
+			{
+				return Socket != null && Socket.Connected;
+			}
+		}
 
-		public bool Alive { get { return Socket != null && Socket.Connected; } }
-		public string User { get { return user; } }
+		public string User
+		{
+			get
+			{
+				return mUser;
+			}
+		}
+
+		string mUser;
 
 		public IrcClient(AClientHandler handler)
 		{
@@ -51,8 +64,7 @@ namespace TwitchIRC
 				return;
 			}
 
-			this.user = user;
-
+			mUser = user;
 			ClientHandler.OnConnect(user, host, port);
 
 			new Thread(Update).Start();
@@ -91,7 +103,7 @@ namespace TwitchIRC
 				{
 					foreach(var line in data.Split('\n'))
 					{
-						if(!string.IsNullOrEmpty(line))
+						if(!String.IsNullOrEmpty(line))
 							ProcessLine(line + '\0');
 					}
 				}

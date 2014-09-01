@@ -67,7 +67,7 @@ namespace TwitchIRC
 				return;
 			}
 
-			if(string.IsNullOrEmpty(command.Desc))
+			if(String.IsNullOrEmpty(command.Desc))
 			{
 				Log.Info(command.Name + " has no description.");
 				return;
@@ -75,7 +75,7 @@ namespace TwitchIRC
 
 			ConsoleUtil.WriteLine(ConsoleColor.Magenta, "Desc: " + command.Desc);
 
-			if(!string.IsNullOrEmpty(command.ArgDesc))
+			if(!String.IsNullOrEmpty(command.ArgDesc))
 				ConsoleUtil.WriteLine(ConsoleColor.Magenta, "Usage: " + command.ArgDesc);
 		}
 

@@ -71,7 +71,7 @@ namespace TwitchIRC
 					builder.Append(" args expected. Got ");
 					builder.Append(funcArgs.Length);
 
-					if(!string.IsNullOrEmpty(command.ArgDesc))
+					if(!String.IsNullOrEmpty(command.ArgDesc))
 					{
 						builder.Append("\nUsage: ");
 						builder.Append(command.ArgDesc);
