@@ -1,6 +1,8 @@
 TwichIRC
 ========
 
+Note: Currently not being worked on. Will likely continue after finishing work on other projects.
+
 Should be stable enough to use without too many issues.
 Currently only tested under Mono on Linux, but should run on other platforms fine.
 
