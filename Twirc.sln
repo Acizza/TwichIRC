@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twirc.CLI", "Twirc.CLI\Twirc.CLI.csproj", "{5BD8BC07-74BD-4274-A831-5141BC955A4C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twirc.Lib", "Twirc.Lib\Twirc.Lib.csproj", "{0CE37B26-7F56-4F84-8B08-19B25D24BA1E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0CE37B26-7F56-4F84-8B08-19B25D24BA1E}.Debug|x86.ActiveCfg = Debug|x86
+		{0CE37B26-7F56-4F84-8B08-19B25D24BA1E}.Debug|x86.Build.0 = Debug|x86
+		{0CE37B26-7F56-4F84-8B08-19B25D24BA1E}.Release|x86.ActiveCfg = Release|x86
+		{0CE37B26-7F56-4F84-8B08-19B25D24BA1E}.Release|x86.Build.0 = Release|x86
+		{5BD8BC07-74BD-4274-A831-5141BC955A4C}.Debug|x86.ActiveCfg = Debug|x86
+		{5BD8BC07-74BD-4274-A831-5141BC955A4C}.Debug|x86.Build.0 = Debug|x86
+		{5BD8BC07-74BD-4274-A831-5141BC955A4C}.Release|x86.ActiveCfg = Release|x86
+		{5BD8BC07-74BD-4274-A831-5141BC955A4C}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = Twirc.CLI\Twirc.CLI.csproj
+	EndGlobalSection
+EndGlobal
