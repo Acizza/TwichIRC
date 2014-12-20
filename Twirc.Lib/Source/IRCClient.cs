@@ -104,6 +104,7 @@ namespace Twirc.Lib
 		/// <returns><c>true</c>, if login was successful, <c>false</c> otherwise.</returns>
 		bool VerifyLogin()
 		{
+			// TODO: Add an anti-blocking mechanism to avoid this hanging *forever* if no valid codes are received.
 			string data;
 
 			while((data = ReadLine()) != null)
@@ -142,7 +143,7 @@ namespace Twirc.Lib
 		}
 
 		/// <summary>
-		/// Connects to the specified server and logins the specified user.
+		/// Connects to the specified server and attempts to login with the specified user information.
 		/// </summary>
 		/// <param name="host">Host.</param>
 		/// <param name="port">Port.</param>
@@ -155,7 +156,7 @@ namespace Twirc.Lib
 		}
 
 		/// <summary>
-		/// Login the specified username and password. Returns true if successful.
+		/// Attempt to login with the specified username and password.
 		/// </summary>
 		/// <param name="username">Username.</param>
 		/// <param name="password">Password.</param>
@@ -179,7 +180,8 @@ namespace Twirc.Lib
 		}
 
 		/// <summary>
-		/// Sends a line of data to the server. Automatically appends \n.
+		/// Sends a line-terminated UTF-8 string to the server.
+		/// Automatically appends a line terminator to the string.
 		/// </summary>
 		/// <param name="data">Data to send.</param>
 		public void SendLine(string data)
@@ -191,7 +193,7 @@ namespace Twirc.Lib
 		}
 
 		/// <summary>
-		/// Reads the next line from the server.
+		/// Reads a UTF-8 string from the server.
 		/// </summary>
 		/// <returns>The line.</returns>
 		public string ReadLine()
