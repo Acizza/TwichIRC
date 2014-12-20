@@ -30,9 +30,11 @@
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Compile Include="Source\IRCClient.cs" />
+    <Compile Include="Source\Util\Extensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Source\" />
+    <Folder Include="Source\Util\" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Net" />
