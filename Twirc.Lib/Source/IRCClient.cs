@@ -7,6 +7,9 @@ namespace Twirc.Lib
 {
 	public sealed class IRCClient : IDisposable
 	{
+		public delegate void ConnectDel(string host, int port);
+		public delegate void LoginDel(string username, string password);
+
 		/// <summary>
 		/// The socket used for sending and receiving data from the server.
 		/// </summary>
@@ -29,6 +32,21 @@ namespace Twirc.Lib
 		/// The maximum amount of bytes to read from the server.
 		/// </summary>
 		public uint MaxBufferSize = 512;
+
+		/// <summary>
+		/// Called when a successful connection occurs.
+		/// </summary>
+		public event ConnectDel OnConnect = delegate {};
+
+		/// <summary>
+		/// Called when a successful login occurs.
+		/// </summary>
+		public event LoginDel OnLogin = delegate {};
+
+		/// <summary>
+		/// Called when a logout is requested.
+		/// </summary>
+		public event Action OnLogout = delegate {};
 
 		/// <summary>
 		/// The host address being used. When set, <see cref="Connect"/> is called with the new information.
@@ -140,6 +158,8 @@ namespace Twirc.Lib
 
 			_host = host;
 			_port = port;
+
+			OnConnect.Invoke(host, port);
 		}
 
 		/// <summary>
@@ -176,6 +196,8 @@ namespace Twirc.Lib
 				return LoginStatus.Failed;
 
 			LoggedIn = true;
+			OnLogin.Invoke(username, password);
+
 			return LoginStatus.Success;
 		}
 
@@ -217,6 +239,8 @@ namespace Twirc.Lib
 
 			SendLine("QUIT :Logout");
 			// TODO: Finish
+
+			OnLogout.Invoke();
 		}
 
 		/// <summary>
