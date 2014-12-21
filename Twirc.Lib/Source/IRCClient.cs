@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Net.Sockets;
 using System.Text;
 using Twirc.Lib.Util;
@@ -9,6 +11,8 @@ namespace Twirc.Lib
 	{
 		public delegate void ConnectDel(string host, int port);
 		public delegate void LoginDel(string username, string password);
+		public delegate void JoinDel(string channel);
+		public delegate void LeaveDel(string channel);
 
 		/// <summary>
 		/// The socket used for sending and receiving data from the server.
@@ -42,6 +46,16 @@ namespace Twirc.Lib
 		/// Called when a successful login occurs.
 		/// </summary>
 		public event LoginDel OnLogin = delegate {};
+
+		/// <summary>
+		/// Called when a channel is joined.
+		/// </summary>
+		public event JoinDel OnJoin = delegate {};
+
+		/// <summary>
+		/// Called when a channel is left.
+		/// </summary>
+		public event LeaveDel OnLeave = delegate {};
 
 		/// <summary>
 		/// Called when a logout is requested.
@@ -94,19 +108,33 @@ namespace Twirc.Lib
 			}
 		}
 
+		/// <summary>
+		/// The list of currently connected channels.
+		/// </summary>
+		/// <value>The channels.</value>
+		public ReadOnlyCollection<string> Channels
+		{
+			get
+			{
+				return _channels.AsReadOnly();
+			}
+		}
+
 		string _host;
 		int _port;
+		List<string> _channels;
 
 		public IRCClient()
 		{
+			_channels = new List<string>();
 		}
 
-		public IRCClient(string host, int port)
+		public IRCClient(string host, int port) : this()
 		{
 			Connect(host, port);
 		}
 
-		public IRCClient(string host, int port, string username, string password)
+		public IRCClient(string host, int port, string username, string password) : this()
 		{
 			Connect(host, port, username, password);
 		}
@@ -184,7 +212,9 @@ namespace Twirc.Lib
 		{
 			if(!Alive)
 				return LoginStatus.NotConnected;
-				
+
+			_channels.Clear();
+
 			Username = username;
 			LoggedIn = false;
 
@@ -230,6 +260,30 @@ namespace Twirc.Lib
 		}
 
 		/// <summary>
+		/// Joins the specified channel.
+		/// </summary>
+		/// <param name="channel">Channel name.</param>
+		public void Join(string channel)
+		{
+			SendLine("JOIN #" + channel);
+
+			OnJoin.Invoke(channel);
+			_channels.Add(channel);
+		}
+
+		/// <summary>
+		/// Leaves the specified channel.
+		/// </summary>
+		/// <param name="channel">Channel.</param>
+		public void Leave(string channel)
+		{
+			SendLine("PART #" + channel);
+
+			_channels.Remove(channel);
+			OnLeave.Invoke(channel);
+		}
+
+		/// <summary>
 		/// Logs out from the server.
 		/// </summary>
 		public void Logout()
@@ -238,9 +292,9 @@ namespace Twirc.Lib
 				return;
 
 			SendLine("QUIT :Logout");
-			// TODO: Finish
 
 			OnLogout.Invoke();
+			_channels.Clear();
 		}
 
 		/// <summary>
