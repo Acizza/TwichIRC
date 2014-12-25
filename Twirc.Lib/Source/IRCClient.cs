@@ -10,8 +10,9 @@ namespace Twirc.Lib
 	public sealed class IRCClient : IDisposable
 	{
 		public delegate void ConnectDel(string host, int port);
-		public delegate void LoginDel(string username, string password);
+		public delegate void LoginDel(LoginResponse response, string username, string password);
 		public delegate void JoinDel(string channel);
+		public delegate void MessageDel(string channel, string user, string message);
 		public delegate void LeaveDel(string channel);
 
 		/// <summary>
@@ -51,6 +52,16 @@ namespace Twirc.Lib
 		/// Called when a channel is joined.
 		/// </summary>
 		public event JoinDel OnJoin = delegate {};
+
+		/// <summary>
+		/// Called when a server ping is received.
+		/// </summary>
+		public event Action OnPing = delegate {};
+
+		/// <summary>
+		/// Called when a message is sent from a channel.
+		/// </summary>
+		public event MessageDel OnMessage = delegate {};
 
 		/// <summary>
 		/// Called when a channel is left.
@@ -148,7 +159,7 @@ namespace Twirc.Lib
 		/// Checks any codes sent by the server to see if a login attempt was successful.
 		/// </summary>
 		/// <returns><c>true</c>, if login was successful, <c>false</c> otherwise.</returns>
-		bool VerifyLogin()
+		LoginResponse VerifyLogin()
 		{
 			// TODO: Add an anti-blocking mechanism to avoid this hanging *forever* if no valid codes are received.
 			string data;
@@ -163,13 +174,92 @@ namespace Twirc.Lib
 						continue;
 
 					if(code == "004" || code == "375")
-						return true;
+					{
+						return new LoginResponse
+						{
+							Status  = LoginStatus.Success,
+							Code    = code,
+							Message = line.Range(" :", "\r")
+						};
+					}
 					if(code[0] == '5' || code[0] == '4' || code == "NOTICE")
-						return false;
+					{
+						return new LoginResponse
+						{
+							Status  = LoginStatus.Failed,
+							Code    = code,
+							Message = line.Range(" :", "\r")
+						};
+					}
 				}
 			}
 
-			return false;
+			return new LoginResponse
+			{
+				Status  = LoginStatus.Failed,
+				Code    = "-1",
+				Message = "Unknown error"
+			};
+		}
+
+		/// <summary>
+		/// Processes a special line (ex: a line prefixed with :jtv) from the server.
+		/// </summary>
+		/// <param name="code">Message code.</param>
+		/// <param name="line">Line to process.</param>
+		void ProcessSpecialLine(string code, string line)
+		{
+			// TODO: Implement
+		}
+
+		/// <summary>
+		/// Processes a standard line (ex: a message sent by someone) from the server.
+		/// </summary>
+		/// <param name="code">Message code.</param>
+		/// <param name="line">Line to process.</param>
+		void ProcessLine(string code, string line)
+		{
+			// Sending PONG after a PING request keeps the connection alive.
+			if(line.StartsWith("PING"))
+			{
+				SendLine("PONG " + line.Substring("POING".Length));
+				OnPing.Invoke();
+
+				return;
+			}
+
+			string username = line.Range(":", "!");
+			string channel  = line.Range("#", " ");
+
+			if(String.IsNullOrEmpty(username) || String.IsNullOrEmpty(channel))
+			{
+				#if DEBUG
+				// TODO: Replace with log class
+				Console.WriteLine("Received empty line with code: " + code);
+				#endif
+
+				return;
+			}
+
+			switch(code)
+			{
+				case "PRIVMSG":
+					OnMessage.Invoke(channel, username, line.Substring(line.IndexOf(':', 1) + 1));
+					break;
+			}
+		}
+
+		/// <summary>
+		/// Sends a line-terminated UTF-8 string to the server.
+		/// Automatically appends a line terminator to the string.
+		/// </summary>
+		/// <param name="data">Data to send.</param>
+		void SendLine(string data)
+		{
+			//if(!Alive)
+			//	return;
+
+			Socket.Send(Encoding.UTF8.GetBytes(data + '\n'));
 		}
 
 		/// <summary>
@@ -208,40 +298,25 @@ namespace Twirc.Lib
 		/// </summary>
 		/// <param name="username">Username.</param>
 		/// <param name="password">Password.</param>
-		public LoginStatus Login(string username, string password)
+		public LoginResponse Login(string username, string password)
 		{
 			if(!Alive)
-				return LoginStatus.NotConnected;
+				return new LoginResponse(LoginStatus.NotConnected, "-1", "Not connected to server");
 
 			_channels.Clear();
-
-			Username = username;
-			LoggedIn = false;
 
 			SendLine("PASS " + password);
 			SendLine("NICK " + username);
 			SendLine("USER " + username + " 8 * :" + username);
 
-			if(!VerifyLogin())
-				return LoginStatus.Failed;
+			var loginInfo = VerifyLogin();
 
-			LoggedIn = true;
-			OnLogin.Invoke(username, password);
+			Username = username;
+			LoggedIn = loginInfo.Status == LoginStatus.Success;
 
-			return LoginStatus.Success;
-		}
+			OnLogin.Invoke(loginInfo, username, password);
 
-		/// <summary>
-		/// Sends a line-terminated UTF-8 string to the server.
-		/// Automatically appends a line terminator to the string.
-		/// </summary>
-		/// <param name="data">Data to send.</param>
-		public void SendLine(string data)
-		{
-			if(!Alive)
-				return;
-
-			Socket.Send(Encoding.UTF8.GetBytes(data + '\n'));
+			return loginInfo;
 		}
 
 		/// <summary>
@@ -257,6 +332,27 @@ namespace Twirc.Lib
 			int read   = Socket.Receive(buffer);
 
 			return Encoding.UTF8.GetString(buffer, 0, read);
+		}
+
+		/// <summary>
+		/// Reads and processes the next line from the server.
+		/// </summary>
+		public void ProcessNextLine()
+		{
+			string data = ReadLine();
+
+			foreach(var line in data.Split('\n'))
+			{
+				if(line.Length == 0)
+					continue;
+
+				string code = line.Range(" ", " ");
+
+				if(line.StartsWith(":jtv "))
+					ProcessSpecialLine(code, line);
+				else
+					ProcessLine(code, line);
+			}
 		}
 
 		/// <summary>
@@ -317,5 +413,26 @@ namespace Twirc.Lib
 		Success,
 		Failed,
 		NotConnected
+	}
+
+	public struct LoginResponse
+	{
+		public LoginStatus Status;
+		public string Code;
+		public string Message;
+
+		public static readonly LoginResponse Default = new LoginResponse
+		{
+			Status  = LoginStatus.Failed,
+			Code    = "0",
+			Message = ""
+		};
+
+		public LoginResponse(LoginStatus status, string code, string message)
+		{
+			Status  = status;
+			Code    = code;
+			Message = message;
+		}
 	}
 }
