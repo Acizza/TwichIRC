@@ -22,17 +22,25 @@ namespace Twirc.CLI
 					Console.WriteLine("Received PING request");
 				};
 
+				irc.OnJoin += (channel, username) =>
+				{
+					Console.WriteLine("User \"{0}\" joined \"{1}\"", username, channel);
+				};
+
+				irc.OnLeave += (channel, username) =>
+				{
+					Console.WriteLine("User \"{0}\" left \"{1}\"", username, channel);
+				};
+
 				irc.OnMessage += (channel, user, message) =>
 				{
 					Console.WriteLine("<{0}> {1}: {2}", channel, user, message);
 				};
 
 				irc.Login("<username>", "<oauth>");
-				irc.Join("<channel here>");
+				irc.Join("<channel>");
 
-				int counter = 0;
-
-				while(counter++ < 100)
+				while(true)
 					irc.ProcessNextLine();
 			}
 		}

@@ -11,9 +11,9 @@ namespace Twirc.Lib
 	{
 		public delegate void ConnectDel(string host, int port);
 		public delegate void LoginDel(LoginResponse response, string username, string password);
-		public delegate void JoinDel(string channel);
+		public delegate void JoinDel(string channel, string username);
 		public delegate void MessageDel(string channel, string user, string message);
-		public delegate void LeaveDel(string channel);
+		public delegate void LeaveDel(string channel, string username);
 
 		/// <summary>
 		/// The socket used for sending and receiving data from the server.
@@ -49,7 +49,7 @@ namespace Twirc.Lib
 		public event LoginDel OnLogin = delegate {};
 
 		/// <summary>
-		/// Called when a channel is joined.
+		/// Called when a user joins a connected channel.
 		/// </summary>
 		public event JoinDel OnJoin = delegate {};
 
@@ -64,7 +64,7 @@ namespace Twirc.Lib
 		public event MessageDel OnMessage = delegate {};
 
 		/// <summary>
-		/// Called when a channel is left.
+		/// Called when a user leaves a connected channel.
 		/// </summary>
 		public event LeaveDel OnLeave = delegate {};
 
@@ -229,9 +229,9 @@ namespace Twirc.Lib
 			}
 
 			string username = line.Range(":", "!");
-			string channel  = line.Range("#", " ");
+			string channel  = line.Range("#", 0, " ", "\r");
 
-			if(String.IsNullOrEmpty(username) || String.IsNullOrEmpty(channel))
+			if(username == "" ||channel == "")
 			{
 				#if DEBUG
 				// TODO: Replace with log class
@@ -245,6 +245,14 @@ namespace Twirc.Lib
 			{
 				case "PRIVMSG":
 					OnMessage.Invoke(channel, username, line.Substring(line.IndexOf(':', 1) + 1));
+					break;
+
+				case "JOIN":
+					OnJoin.Invoke(channel, username);
+					break;
+
+				case "PART":
+					OnLeave.Invoke(channel, username);
 					break;
 			}
 		}
@@ -362,8 +370,6 @@ namespace Twirc.Lib
 		public void Join(string channel)
 		{
 			SendLine("JOIN #" + channel);
-
-			OnJoin.Invoke(channel);
 			_channels.Add(channel);
 		}
 
@@ -374,9 +380,7 @@ namespace Twirc.Lib
 		public void Leave(string channel)
 		{
 			SendLine("PART #" + channel);
-
 			_channels.Remove(channel);
-			OnLeave.Invoke(channel);
 		}
 
 		/// <summary>
