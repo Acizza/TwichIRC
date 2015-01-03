@@ -2,7 +2,7 @@
 
 namespace Twirc.Lib.Util
 {
-	public static class Extensions
+	internal static class Extensions
 	{
 		/// <summary>
 		/// Returns the string found between start and end. Returns an empty string if nothing is found.
