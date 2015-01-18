@@ -18,7 +18,7 @@ namespace Twirc.Lib.Util
 			if(startIdx < 0)
 				return "";
 
-			int endIdx = source.IndexOf(end, startIdx + offset + 1); // Add 1 to skip the start index in case they're the same
+			int endIdx = source.IndexOf(end, startIdx + 1); // Add 1 to skip the start index in case they're the same
 
 			if(endIdx < 0)
 				return "";
@@ -56,7 +56,7 @@ namespace Twirc.Lib.Util
 
 			foreach(var end in ends)
 			{
-				endIdx = source.IndexOf(end, startIdx + offset + 1); // Add 1 to skip the start index in case they're the same
+				endIdx = source.IndexOf(end, startIdx + 1); // Add 1 to skip the start index in case they're the same
 
 				if(endIdx != -1)
 				{

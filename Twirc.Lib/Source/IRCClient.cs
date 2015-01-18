@@ -34,10 +34,10 @@ namespace Twirc.Lib
 
 		public delegate void ConnectDel(string host, int port);
 		public delegate void LoginDel(LoginResponse response, string username, string password);
-		public delegate void JoinDel(string channel, string username);
-		public delegate void MessageDel(string channel, string username, string message);
-		public delegate void UserSubscribedDel(string channel, string username);
-		public delegate void LeaveDel(string channel, string username);
+		public delegate void JoinDel(Channel channel, string username);
+		public delegate void MessageDel(Channel channel, string username, string message);
+		public delegate void UserSubscribedDel(Channel channel, string username);
+		public delegate void LeaveDel(Channel channel, string username);
 
 		/// <summary>
 		/// Called when a successful connection occurs.
@@ -104,16 +104,16 @@ namespace Twirc.Lib
 		/// The list of currently connected channels.
 		/// </summary>
 		/// <value>The channels.</value>
-		public ReadOnlyCollection<string> Channels
+		public ReadOnlyCollection<Channel> Channels
 		{
 			get { return _channels.AsReadOnly(); }
 		}
 
-		private List<string> _channels;
+		private List<Channel> _channels;
 
 		public IRCClient()
 		{
-			_channels = new List<string>();
+			_channels = new List<Channel>();
 		}
 
 		public IRCClient(string host, int port) : this()
@@ -203,76 +203,6 @@ namespace Twirc.Lib
 		}
 
 		/// <summary>
-		/// Reads a UTF-8 string from the server.
-		/// </summary>
-		/// <returns>The line.</returns>
-		public string ReadLine()
-		{
-			if(!Alive)
-				return "";
-
-			var buffer = new byte[MaxBufferSize];
-			int read   = Socket.Receive(buffer);
-
-			return Encoding.UTF8.GetString(buffer, 0, read);
-		}
-
-		/// <summary>
-		/// Reads and processes the next line from the server.
-		/// </summary>
-		public void ProcessNextLine()
-		{
-			string data = ReadLine();
-
-			foreach(var line in data.Split('\n'))
-			{
-				if(line.Length == 0)
-					continue;
-
-				string code = line.Range(" ", " ");
-
-				if(line.StartsWith(":jtv "))
-					ProcessSpecialLine(code, line);
-				else
-					ProcessLine(code, line);
-			}
-		}
-
-		/// <summary>
-		/// Joins the specified channel.
-		/// </summary>
-		/// <param name="channel">Channel name.</param>
-		public void Join(string channel)
-		{
-			SendLine("JOIN #" + channel);
-			_channels.Add(channel);
-		}
-
-		/// <summary>
-		/// Leaves the specified channel.
-		/// </summary>
-		/// <param name="channel">Channel.</param>
-		public void Leave(string channel)
-		{
-			SendLine("PART #" + channel);
-			_channels.Remove(channel);
-		}
-
-		/// <summary>
-		/// Logs out from the server.
-		/// </summary>
-		public void Logout()
-		{
-			if(!Alive || !LoggedIn)
-				return;
-
-			SendLine("QUIT :Logout");
-
-			OnLogout.Invoke();
-			_channels.Clear();
-		}
-
-		/// <summary>
 		/// Checks any codes sent by the server to see if a login attempt was successful.
 		/// </summary>
 		/// <returns><c>true</c>, if login was successful, <c>false</c> otherwise.</returns>
@@ -320,6 +250,86 @@ namespace Twirc.Lib
 		}
 
 		/// <summary>
+		/// Logs out from the server.
+		/// </summary>
+		public void Logout()
+		{
+			if(!Alive || !LoggedIn)
+				return;
+
+			SendLine("QUIT :Logout");
+
+			OnLogout.Invoke();
+			_channels.Clear();
+		}
+
+		/// <summary>
+		/// Joins the specified channel.
+		/// </summary>
+		/// <param name="channel">Channel name.</param>
+		public void Join(string channel)
+		{
+			SendLine("JOIN #" + channel);
+			_channels.Add(new Channel(channel));
+		}
+
+		/// <summary>
+		/// Leaves the specified channel.
+		/// </summary>
+		/// <param name="channel">Channel.</param>
+		public void Leave(string channel)
+		{
+			SendLine("PART #" + channel);
+			_channels.Remove(_channels.Find(x => x.Name == channel));
+		}
+
+		/// <summary>
+		/// Reads a UTF-8 string from the server.
+		/// </summary>
+		/// <returns>The line.</returns>
+		public string ReadLine()
+		{
+			if(!Alive)
+				return "";
+
+			var buffer = new byte[MaxBufferSize];
+			int read   = Socket.Receive(buffer);
+
+			return Encoding.UTF8.GetString(buffer, 0, read);
+		}
+
+		/// <summary>
+		/// Sends a line-terminated UTF-8 string to the server.
+		/// Automatically appends a line terminator to the string.
+		/// </summary>
+		/// <param name="data">Data to send.</param>
+		private void SendLine(string data)
+		{
+			Socket.Send(Encoding.UTF8.GetBytes(data + "\n"));
+		}
+
+		/// <summary>
+		/// Reads and processes the next line from the server.
+		/// </summary>
+		public void ProcessNextLine()
+		{
+			string data = ReadLine();
+
+			foreach(var line in data.Split('\n'))
+			{
+				if(line.Length == 0)
+					continue;
+
+				string code = line.Range(" ", " ");
+
+				if(line.StartsWith(":jtv "))
+					ProcessSpecialLine(code, line);
+				else
+					ProcessLine(code, line);
+			}
+		}
+
+		/// <summary>
 		/// Processes a special line (ex: a line prefixed with :jtv) from the server.
 		/// </summary>
 		/// <param name="code">Message code.</param>
@@ -329,6 +339,7 @@ namespace Twirc.Lib
 			// TODO: Implement
 		}
 
+		// TODO: Refactor
 		/// <summary>
 		/// Processes a standard line (ex: a message sent by someone) from the server.
 		/// </summary>
@@ -345,17 +356,23 @@ namespace Twirc.Lib
 				return;
 			}
 
-			string username = line.Range(":", "!");
-			string channel  = line.Range("#", 0, " ", "\r");
+			var channel = _channels.Find(x => x.Name == line.Range("#", 0, " ", "\r"));
 
-			if(username.Length == 0 ||channel.Length == 0)
+			if(channel == null)
+				return;
+
+			// TODO: Make list of channels available when a channel is joined
+			// 353 is the code that contains the list of channel viewers
+			if(code == "353")
 			{
-				#if DEBUG
-				Console.WriteLine("WARNING: Received empty line with code: " + code);
-				#endif
-
+				ParseChannelUsers(channel, line);
 				return;
 			}
+
+			string username = line.Range(":", "!");
+
+			if(username.Length == 0)
+				return;
 
 			// Assume anything from twitchnotify is a subscription (for now)
 			if(username == "twitchnotify")
@@ -371,23 +388,26 @@ namespace Twirc.Lib
 					break;
 
 				case "JOIN":
+					channel.Users.Add(username);
 					OnJoin.Invoke(channel, username);
 					break;
 
 				case "PART":
+					channel.Users.Remove(username);
 					OnLeave.Invoke(channel, username);
 					break;
 			}
 		}
 
 		/// <summary>
-		/// Sends a line-terminated UTF-8 string to the server.
-		/// Automatically appends a line terminator to the string.
+		/// Parses a message containing the list of viewers and adds them to the channel's user list.
 		/// </summary>
-		/// <param name="data">Data to send.</param>
-		private void SendLine(string data)
+		/// <param name="channel">Channel to add the users to.</param>
+		/// <param name="line">Line of data to parse.</param>
+		private static void ParseChannelUsers(Channel channel, string line)
 		{
-			Socket.Send(Encoding.UTF8.GetBytes(data + "\n"));
+			foreach(var name in line.Substring(line.IndexOf(" :") + " :".Length).Split(' '))
+				channel.Users.Add(name);
 		}
 	}
 }
