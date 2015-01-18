@@ -35,7 +35,8 @@ namespace Twirc.Lib
 		public delegate void ConnectDel(string host, int port);
 		public delegate void LoginDel(LoginResponse response, string username, string password);
 		public delegate void JoinDel(string channel, string username);
-		public delegate void MessageDel(string channel, string user, string message);
+		public delegate void MessageDel(string channel, string username, string message);
+		public delegate void UserSubscribedDel(string channel, string username);
 		public delegate void LeaveDel(string channel, string username);
 
 		/// <summary>
@@ -64,6 +65,11 @@ namespace Twirc.Lib
 		public event MessageDel OnMessage = delegate {};
 
 		/// <summary>
+		/// Called when a user subcribes to a connected channel.
+		/// </summary>
+		public event UserSubscribedDel OnUserSubscribed = delegate {};
+
+		/// <summary>
 		/// Called when a user leaves a connected channel.
 		/// </summary>
 		public event LeaveDel OnLeave = delegate {};
@@ -74,38 +80,16 @@ namespace Twirc.Lib
 		public event Action OnLogout = delegate {};
 
 		/// <summary>
-		/// The host address being used. When set, <see cref="Connect"/> is called with the new information.
+		/// The host address being used.
 		/// </summary>
 		/// <value>The host address.</value>
-		public string Host
-		{
-			get
-			{
-				return _host;
-			}
-			set
-			{
-				_host = value;
-				Connect(value, Port);
-			}
-		}
+		public string Host { get; private set; }
 
 		/// <summary>
-		/// The port being used. When set, <see cref="Connect"/> is called with the new information. 
+		/// The port being used.
 		/// </summary>
 		/// <value>The port.</value>
-		public int Port
-		{
-			get
-			{
-				return _port;
-			}
-			set
-			{
-				_port = value;
-				Connect(Host, value);
-			}
-		}
+		public int Port { get; private set; }
 
 		/// <summary>
 		/// Returns true if the socket being used is not null and is connected.
@@ -113,10 +97,7 @@ namespace Twirc.Lib
 		/// <value><c>true</c> if connected; otherwise, <c>false</c>.</value>
 		public bool Alive
 		{
-			get
-			{
-				return Socket != null && Socket.Connected;
-			}
+			get { return Socket != null && Socket.Connected; }
 		}
 
 		/// <summary>
@@ -125,14 +106,9 @@ namespace Twirc.Lib
 		/// <value>The channels.</value>
 		public ReadOnlyCollection<string> Channels
 		{
-			get
-			{
-				return _channels.AsReadOnly();
-			}
+			get { return _channels.AsReadOnly(); }
 		}
 
-		private string _host;
-		private int _port;
 		private List<string> _channels;
 
 		public IRCClient()
@@ -181,8 +157,8 @@ namespace Twirc.Lib
 			Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 			Socket.Connect(host, port);
 
-			_host = host;
-			_port = port;
+			Host = host;
+			Port = port;
 
 			OnConnect.Invoke(host, port);
 		}
@@ -375,10 +351,16 @@ namespace Twirc.Lib
 			if(username.Length == 0 ||channel.Length == 0)
 			{
 				#if DEBUG
-				// TODO: Replace with log class
-				Console.WriteLine("Received empty line with code: " + code);
+				Console.WriteLine("WARNING: Received empty line with code: " + code);
 				#endif
 
+				return;
+			}
+
+			// Assume anything from twitchnotify is a subscription (for now)
+			if(username == "twitchnotify")
+			{
+				OnUserSubscribed.Invoke(channel, line.Range(":", " ", 1));
 				return;
 			}
 
@@ -405,9 +387,6 @@ namespace Twirc.Lib
 		/// <param name="data">Data to send.</param>
 		private void SendLine(string data)
 		{
-			//if(!Alive)
-			//	return;
-
 			Socket.Send(Encoding.UTF8.GetBytes(data + "\n"));
 		}
 	}

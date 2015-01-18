@@ -7,6 +7,9 @@ namespace Twirc.CLI
 	{
 		static void Main(string[] args)
 		{
+			// This IP can also be used
+			//using(var irc = new IRCClient("199.9.250.117", 443))
+
 			using(var irc = new IRCClient("irc.twitch.tv", 6667))
 			{
 				irc.OnLogin += (response, username, password) =>
@@ -35,6 +38,11 @@ namespace Twirc.CLI
 				irc.OnMessage += (channel, user, message) =>
 				{
 					Console.WriteLine("<{0}> {1}: {2}", channel, user, message);
+				};
+
+				irc.OnUserSubscribed += (channel, username) =>
+				{
+					Console.WriteLine("User \"{0} \" subscribed to \"{1}\"", username, channel);
 				};
 
 				irc.Login("<username>", "<oauth>");
