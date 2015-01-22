@@ -36,9 +36,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Source\Program.cs" />
+    <Compile Include="Source\Util\OptionParser.cs" />
+    <Compile Include="Source\Util\OptionDesc.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Source\" />
+    <Folder Include="Source\Util\" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />

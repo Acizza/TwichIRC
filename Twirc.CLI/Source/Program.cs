@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using Twirc.CLI.Util;
 using Twirc.Lib;
+using System.Threading;
 
 namespace Twirc.CLI
 {
@@ -7,68 +10,107 @@ namespace Twirc.CLI
 	{
 		static void Main(string[] args)
 		{
-			// This IP can also be used
-			//using(var irc = new IRCClient("199.9.250.117", 443))
+			var options = new OptionParser();
 
-			using(var irc = new IRCClient("irc.twitch.tv", 6667))
+			string loginUsername = null;
+			string loginPassword = null;
+			var joinChannels     = new List<string>();
+
+			options["u|user|username"] = new OptionDesc(
+				v => loginUsername = v,
+				"Username to use for login.");
+
+			options["p|pass|oauth|o|password"] = new OptionDesc(
+				v => loginPassword = v,
+				"The password / oauth key to use for login.");
+
+			options.OnOtherArgument += joinChannels.Add;
+			options.Parse(args);
+
+			if(String.IsNullOrEmpty(loginUsername) || String.IsNullOrEmpty(loginPassword))
 			{
-				irc.OnLogin += (response, username, password) =>
-				{
-					if(response.Status == LoginStatus.Success)
-						Console.WriteLine("Logged in as: " + username);
-					else
-						Console.WriteLine("Failed to login [{0}]: {1}", response.Code, response.Message);
-				};
+				Console.ForegroundColor = ConsoleColor.Yellow;
+				Console.WriteLine("Login username / password cannot be empty.");
 
-				irc.OnPing += () =>
-				{
-					Console.WriteLine("Received PING request");
-				};
+				Environment.Exit(2);
+			}
 
-				irc.OnJoin += (channel, username) =>
-				{
-					WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
-					Write(ConsoleColor.Red, username);
-					Write(ConsoleColor.White, " joined ");
-					WriteLine(ConsoleColor.DarkYellow, channel.Name);
-				};
+			// This address can also be used: 199.9.250.117:443
+			using(var client = new IRCClient("irc.twitch.tv", 6667))
+			{
+				InitializeClient(client);
 
-				irc.OnLeave += (channel, username) =>
-				{
-					WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
-					Write(ConsoleColor.Red, username);
-					Write(ConsoleColor.White, " left ");
-					WriteLine(ConsoleColor.DarkYellow, channel.Name);
-				};
-
-				irc.OnMessage += (channel, user, message) =>
-				{
-					WriteFmt(ConsoleColor.DarkYellow, "[{0}] <{1}> ",
-						GetTime(),
-						channel.Name);
-
-					Write(ConsoleColor.Red, user);
-					WriteLine(ConsoleColor.White, ": " + message);
-				};
-
-				irc.OnUserSubscribed += (channel, username) =>
-				{
-					WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
-					Write(ConsoleColor.White, "User ");
-					Write(ConsoleColor.Red, username);
-					Write(ConsoleColor.White, " subscribed to ");
-					WriteLine(ConsoleColor.DarkYellow, channel.Name);
-				};
-
-				irc.Login("<username>", "<oauth>");
-				irc.Join("<channel>");
-
-				if(!irc.LoggedIn)
+				if(client.Login(loginUsername, loginPassword).Status != LoginStatus.Success)
 					return;
 
-				while(irc.Alive)
-					irc.ProcessNextLine();
+				foreach(var channel in joinChannels)
+					client.Join(channel);
+
+				var processThread = new Thread(_ =>
+				{
+					while(client.Alive)
+						client.ProcessNextLine();
+				});
+
+				processThread.IsBackground = true;
+				processThread.Start();
 			}
+		}
+
+		static void InitializeClient(IRCClient client)
+		{
+			client.OnLogin += (response, username, password) =>
+			{
+				if(response.Status == LoginStatus.Success)
+				{
+					WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+					Write(ConsoleColor.White, "Logged in as ");
+					WriteLine(ConsoleColor.Red, username);
+				}
+				else
+				{
+					WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+					Write(ConsoleColor.White, "Failed to login [");
+					Write(ConsoleColor.Red, response.Code);
+					Write(ConsoleColor.White, "]: ");
+					WriteLine(ConsoleColor.Red, response.Message);
+				}
+			};
+
+			client.OnJoin += (channel, username) =>
+			{
+				WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+				Write(ConsoleColor.Red, username);
+				Write(ConsoleColor.White, " joined ");
+				WriteLine(ConsoleColor.DarkYellow, channel.Name);
+			};
+
+			client.OnLeave += (channel, username) =>
+			{
+				WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+				Write(ConsoleColor.Red, username);
+				Write(ConsoleColor.White, " left ");
+				WriteLine(ConsoleColor.DarkYellow, channel.Name);
+			};
+
+			client.OnMessage += (channel, user, message) =>
+			{
+				WriteFmt(ConsoleColor.DarkYellow, "[{0}] <{1}> ",
+					GetTime(),
+					channel.Name);
+
+				Write(ConsoleColor.Red, user);
+				WriteLine(ConsoleColor.White, ": " + message);
+			};
+
+			client.OnUserSubscribed += (channel, username) =>
+			{
+				WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+				Write(ConsoleColor.White, "User ");
+				Write(ConsoleColor.Red, username);
+				Write(ConsoleColor.White, " subscribed to ");
+				WriteLine(ConsoleColor.DarkYellow, channel.Name);
+			};
 		}
 
 		static void WriteFmt(ConsoleColor color, string format, params object[] message)
