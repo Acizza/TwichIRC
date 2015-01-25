@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Net.Sockets;
 using System.Text;
 using Twirc.Lib.Util;
+using System.Linq;
 
 namespace Twirc.Lib
 {
@@ -15,16 +16,7 @@ namespace Twirc.Lib
 		/// <value>The socket.</value>
 		public Socket Socket { get; private set; }
 
-		/// <summary>
-		/// A value indicating if the client is logged in to the connected server.
-		/// </summary>
-		/// <value><c>true</c> if logged in; otherwise, <c>false</c>.</value>
-		public bool LoggedIn { get; private set; }
-
-		/// <summary>
-		/// The username currently logged in.
-		/// </summary>
-		/// <value>The username.</value>
+		public bool LoggedIn   { get; private set; }
 		public string Username { get; private set; }
 
 		/// <summary>
@@ -33,7 +25,7 @@ namespace Twirc.Lib
 		public uint MaxBufferSize = 512;
 
 		public delegate void ConnectDel(string host, int port);
-		public delegate void LoginDel(LoginResponse response, string username, string password);
+		public delegate void LoginDel(LoginResponse response, string username);
 		public delegate void JoinDel(Channel channel, string username);
 		public delegate void MessageDel(Channel channel, string username, string message);
 		public delegate void UserSubscribedDel(Channel channel, string username);
@@ -45,7 +37,7 @@ namespace Twirc.Lib
 		public event ConnectDel OnConnect = delegate {};
 
 		/// <summary>
-		/// Called when a successful login occurs.
+		/// Called when a response to a login request is received.
 		/// </summary>
 		public event LoginDel OnLogin = delegate {};
 
@@ -79,17 +71,8 @@ namespace Twirc.Lib
 		/// </summary>
 		public event Action OnLogout = delegate {};
 
-		/// <summary>
-		/// The host address being used.
-		/// </summary>
-		/// <value>The host address.</value>
 		public string Host { get; private set; }
-
-		/// <summary>
-		/// The port being used.
-		/// </summary>
-		/// <value>The port.</value>
-		public int Port { get; private set; }
+		public int Port    { get; private set; }
 
 		/// <summary>
 		/// Returns true if the socket being used is not null and is connected.
@@ -139,8 +122,6 @@ namespace Twirc.Lib
 			if(!Alive)
 				return;
 
-			Logout();
-
 			Socket.Shutdown(SocketShutdown.Both);
 			Socket.Close();
 		}
@@ -181,10 +162,13 @@ namespace Twirc.Lib
 		/// </summary>
 		/// <param name="username">Username.</param>
 		/// <param name="password">Password.</param>
-		public LoginResponse Login(string username, string password)
+		public void Login(string username, string password)
 		{
 			if(!Alive)
-				return new LoginResponse(LoginStatus.NotConnected, "-1", "Not connected to server");
+				return;
+
+			if(LoggedIn)
+				Connect(Host, Port);
 
 			_channels.Clear();
 
@@ -192,61 +176,8 @@ namespace Twirc.Lib
 			SendLine("NICK " + username);
 			SendLine("USER " + username + " 8 * :" + username);
 
-			var loginInfo = VerifyLogin();
-
 			Username = username;
-			LoggedIn = loginInfo.Status == LoginStatus.Success;
-
-			OnLogin.Invoke(loginInfo, username, password);
-
-			return loginInfo;
-		}
-
-		/// <summary>
-		/// Checks any codes sent by the server to see if a login attempt was successful.
-		/// </summary>
-		/// <returns><c>true</c>, if login was successful, <c>false</c> otherwise.</returns>
-		private LoginResponse VerifyLogin()
-		{
-			// TODO: Add an anti-blocking mechanism to avoid this hanging *forever* if no valid codes are received.
-			string data;
-
-			while((data = ReadLine()) != null)
-			{
-				foreach(var line in data.Split('\n'))
-				{
-					string code = line.Range(" ");
-
-					if(code.Length == 0)
-						continue;
-
-					if(code == "004" || code == "375")
-					{
-						return new LoginResponse
-						{
-							Status  = LoginStatus.Success,
-							Code    = code,
-							Message = line.Range(" :", "\r")
-						};
-					}
-					if(code[0] == '5' || code[0] == '4' || code == "NOTICE")
-					{
-						return new LoginResponse
-						{
-							Status  = LoginStatus.Failed,
-							Code    = code,
-							Message = line.Range(" :", "\r")
-						};
-					}
-				}
-			}
-
-			return new LoginResponse
-			{
-				Status  = LoginStatus.Failed,
-				Code    = "-1",
-				Message = "Unknown error"
-			};
+			LoggedIn = false;
 		}
 
 		/// <summary>
@@ -274,13 +205,27 @@ namespace Twirc.Lib
 		}
 
 		/// <summary>
+		/// Returns true if the client is currently connected to the specified channel.
+		/// </summary>
+		/// <returns><c>true</c> if this instance is connected to the specified channel; otherwise, <c>false</c>.</returns>
+		/// <param name="channel">Channel.</param>
+		public bool IsConnectedTo(string channel)
+		{
+			return _channels.Any(x => x.Name == channel);
+		}
+
+		/// <summary>
 		/// Leaves the specified channel.
 		/// </summary>
-		/// <param name="channel">Channel.</param>
-		public void Leave(string channel)
+		/// <param name="channelName">Channel.</param>
+		public void Leave(string channelName)
 		{
-			SendLine("PART #" + channel);
-			_channels.Remove(_channels.Find(x => x.Name == channel));
+			var channel = _channels.Find(x => x.Name == channelName);
+
+			SendLine("PART #" + channelName);
+			_channels.Remove(channel);
+
+			OnLeave.Invoke(channel, Username);
 		}
 
 		/// <summary>
@@ -322,10 +267,37 @@ namespace Twirc.Lib
 
 				string code = line.Range(" ", " ");
 
+				ProcessCode(code, line);
+
 				if(line.StartsWith(":jtv "))
 					ProcessSpecialLine(code, line);
 				else
 					ProcessLine(code, line);
+			}
+		}
+
+		private void ProcessCode(string code, string line)
+		{
+			if(!LoggedIn)
+			{
+				var channel = _channels.Find(x => x.Name == line.From("#"));
+
+				switch(code)
+				{
+					case "353":
+						// TODO: Make list of channels available when a channel is joined
+						ParseChannelViewers(channel, line);
+						break;
+
+					case "004":
+					case "375":
+						LoggedIn = true;
+						OnLogin.Invoke(new LoginResponse(true, code, "Login successful."), Username);
+						break;
+				}
+
+				if(code[0] == '5' || code[0] == '4' || code == "NOTICE")
+					OnLogin.Invoke(new LoginResponse(false, code, line.From(" :")), Username);
 			}
 		}
 
@@ -350,7 +322,7 @@ namespace Twirc.Lib
 			// Sending PONG after a PING request keeps the connection alive.
 			if(line.StartsWith("PING"))
 			{
-				SendLine("PONG " + line.Substring("POING".Length));
+				SendLine(line.From("PONG ", false));
 				OnPing.Invoke();
 
 				return;
@@ -360,14 +332,6 @@ namespace Twirc.Lib
 
 			if(channel == null)
 				return;
-
-			// TODO: Make list of channels available when a channel is joined
-			// 353 is the code that contains the list of channel viewers
-			if(code == "353")
-			{
-				ParseChannelUsers(channel, line);
-				return;
-			}
 
 			string username = line.Range(":", "!");
 
@@ -384,7 +348,7 @@ namespace Twirc.Lib
 			switch(code)
 			{
 				case "PRIVMSG":
-					OnMessage.Invoke(channel, username, line.Substring(line.IndexOf(':', 1) + 1));
+					OnMessage.Invoke(channel, username, line.From(":", true, 1));
 					break;
 
 				case "JOIN":
@@ -404,9 +368,9 @@ namespace Twirc.Lib
 		/// </summary>
 		/// <param name="channel">Channel to add the users to.</param>
 		/// <param name="line">Line of data to parse.</param>
-		private static void ParseChannelUsers(Channel channel, string line)
+		private static void ParseChannelViewers(Channel channel, string line)
 		{
-			foreach(var name in line.Substring(line.IndexOf(" :") + " :".Length).Split(' '))
+			foreach(var name in line.To(" :").Split(' '))
 				channel.Users.Add(name);
 		}
 	}

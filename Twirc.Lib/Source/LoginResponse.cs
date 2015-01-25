@@ -4,22 +4,22 @@ namespace Twirc.Lib
 {
 	public struct LoginResponse
 	{
-		public LoginStatus Status;
 		public string Code;
 		public string Message;
+		public bool Success;
 
-		public static readonly LoginResponse Default = new LoginResponse
+		public static readonly LoginResponse Successful = new LoginResponse
 		{
-			Status  = LoginStatus.Failed,
 			Code    = "0",
-			Message = ""
+			Message = "",
+			Success = true
 		};
 
-		public LoginResponse(LoginStatus status, string code, string message)
+		public LoginResponse(bool success, string code, string message)
 		{
-			Status  = status;
 			Code    = code;
 			Message = message;
+			Success = success;
 		}
 	}
 }

@@ -1,71 +1,83 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using Twirc.CLI.Util;
 using Twirc.Lib;
-using System.Threading;
 
 namespace Twirc.CLI
 {
-	public sealed class Program
+	public static class Program
 	{
-		static void Main(string[] args)
+		public static IRCClient Client { get; private set; }
+
+		private static List<string> _joinChannels;
+
+		private static void Main(string[] args)
 		{
 			var options = new OptionParser();
 
-			string loginUsername = null;
-			string loginPassword = null;
-			var joinChannels     = new List<string>();
+			string username = null;
+			string password = null;
+			_joinChannels   = new List<string>();
 
 			options["u|user|username"] = new OptionDesc(
-				v => loginUsername = v,
+				v => username = v,
 				"Username to use for login.");
 
 			options["p|pass|oauth|o|password"] = new OptionDesc(
-				v => loginPassword = v,
+				v => password = v,
 				"The password / oauth key to use for login.");
 
-			options.OnOtherArgument += joinChannels.Add;
+			options.OnOtherArgument += _joinChannels.Add;
 			options.Parse(args);
 
-			if(String.IsNullOrEmpty(loginUsername) || String.IsNullOrEmpty(loginPassword))
-			{
-				Console.ForegroundColor = ConsoleColor.Yellow;
-				Console.WriteLine("Login username / password cannot be empty.");
+			RunClient(username, password);
+		}
 
-				Environment.Exit(2);
-			}
-
+		private static void RunClient(string username, string password)
+		{
 			// This address can also be used: 199.9.250.117:443
-			using(var client = new IRCClient("irc.twitch.tv", 6667))
+			using(Client = new IRCClient("irc.twitch.tv", 6667))
 			{
-				InitializeClient(client);
+				InitializeClient(Client);
 
-				if(client.Login(loginUsername, loginPassword).Status != LoginStatus.Success)
-					return;
-
-				foreach(var channel in joinChannels)
-					client.Join(channel);
+				if(!String.IsNullOrEmpty(username) && !String.IsNullOrEmpty(password))
+					Client.Login(username, password);
 
 				var processThread = new Thread(_ =>
 				{
-					while(client.Alive)
-						client.ProcessNextLine();
+					while(Client.Alive)
+						Client.ProcessNextLine();
 				});
 
 				processThread.IsBackground = true;
 				processThread.Start();
+
+				while(true)
+				{
+					var result = CommandProcessor.Process(Console.ReadLine());
+
+					if(!result.Item2)
+						WriteLine(ConsoleColor.Red, "ERROR: " + result.Item1);
+				}
 			}
 		}
 
-		static void InitializeClient(IRCClient client)
+		private static void InitializeClient(IRCClient client)
 		{
-			client.OnLogin += (response, username, password) =>
+			client.OnLogin += (response, username) =>
 			{
-				if(response.Status == LoginStatus.Success)
+				if(response.Success)
 				{
 					WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
 					Write(ConsoleColor.White, "Logged in as ");
 					WriteLine(ConsoleColor.Red, username);
+
+					foreach(var channel in _joinChannels)
+						client.Join(channel);
+
+					// No longer needed.
+					_joinChannels = null;
 				}
 				else
 				{
@@ -113,31 +125,35 @@ namespace Twirc.CLI
 			};
 		}
 
-		static void WriteFmt(ConsoleColor color, string format, params object[] message)
+		public static void WriteFmt(ConsoleColor color, string format, params object[] message)
 		{
 			Console.ForegroundColor = color;
 			Console.Write(format, message);
+			Console.ResetColor();
 		}
 
-		static void WriteLineFmt(ConsoleColor color, string format, params object[] message)
+		public static void WriteLineFmt(ConsoleColor color, string format, params object[] message)
 		{
 			Console.ForegroundColor = color;
 			Console.WriteLine(format, message);
+			Console.ResetColor();
 		}
 
-		static void Write(ConsoleColor color, string message)
+		public static void Write(ConsoleColor color, string message)
 		{
 			Console.ForegroundColor = color;
 			Console.Write(message);
+			Console.ResetColor();
 		}
 
-		static void WriteLine(ConsoleColor color, string message)
+		public static void WriteLine(ConsoleColor color, string message)
 		{
 			Console.ForegroundColor = color;
 			Console.WriteLine(message);
+			Console.ResetColor();
 		}
 
-		static string GetTime()
+		public static string GetTime()
 		{
 			return DateTime.Now.ToString("hh:mm:ss tt");
 		}
