@@ -75,9 +75,6 @@ namespace Twirc.CLI
 
 					foreach(var channel in _joinChannels)
 						client.Join(channel);
-
-					// No longer needed.
-					_joinChannels = null;
 				}
 				else
 				{

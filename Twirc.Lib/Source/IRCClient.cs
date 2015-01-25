@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using Twirc.Lib.Util;
-using System.Linq;
 
 namespace Twirc.Lib
 {
@@ -16,8 +16,10 @@ namespace Twirc.Lib
 		/// <value>The socket.</value>
 		public Socket Socket { get; private set; }
 
-		public bool LoggedIn   { get; private set; }
 		public string Username { get; private set; }
+		public string Host     { get; private set; }
+		public int Port        { get; private set; }
+		public bool LoggedIn   { get; private set; }
 
 		/// <summary>
 		/// The maximum amount of bytes to read from the server.
@@ -70,9 +72,6 @@ namespace Twirc.Lib
 		/// Called when a logout is requested.
 		/// </summary>
 		public event Action OnLogout = delegate {};
-
-		public string Host { get; private set; }
-		public int Port    { get; private set; }
 
 		/// <summary>
 		/// Returns true if the socket being used is not null and is connected.
@@ -287,7 +286,8 @@ namespace Twirc.Lib
 
 				string code = line.Range(" ", " ");
 
-				ProcessCode(code, line);
+				if(code.Length > 0)
+					ProcessCode(code, line);
 
 				if(line.StartsWith(":jtv "))
 					ProcessSpecialLine(code, line);
@@ -298,27 +298,29 @@ namespace Twirc.Lib
 
 		private void ProcessCode(string code, string line)
 		{
-			if(!LoggedIn)
+			switch(code)
 			{
-				var channel = GetChannelByName(line.From("#"));
+				case "353":
+					// TODO: Make list of channels available when a channel is joined
+					var channel = GetChannelByName(line.Range("#", 0, " ", "\r"));
 
-				switch(code)
-				{
-					case "353":
-						// TODO: Make list of channels available when a channel is joined
+					if(channel != null)
 						ParseChannelViewers(channel, line);
+
+					break;
+
+				case "004":
+				case "375":
+					if(LoggedIn)
 						break;
 
-					case "004":
-					case "375":
-						LoggedIn = true;
-						OnLogin.Invoke(new LoginResponse(true, code, "Login successful."), Username);
-						break;
-				}
-
-				if(code[0] == '5' || code[0] == '4' || code == "NOTICE")
-					OnLogin.Invoke(new LoginResponse(false, code, line.From(" :")), Username);
+					LoggedIn = true;
+					OnLogin.Invoke(new LoginResponse(true, code, "Login successful."), Username);
+					break;
 			}
+
+			if(code[0] == '5' || code[0] == '4' || code == "NOTICE")
+				OnLogin.Invoke(new LoginResponse(false, code, line.From(" :")), Username);
 		}
 
 		/// <summary>
@@ -372,11 +374,17 @@ namespace Twirc.Lib
 					break;
 
 				case "JOIN":
+					if(channel.Users.Contains(username))
+						break;
+
 					channel.Users.Add(username);
 					OnJoin.Invoke(channel, username);
 					break;
 
 				case "PART":
+					if(!channel.Users.Contains(username))
+						break;
+
 					channel.Users.Remove(username);
 					OnLeave.Invoke(channel, username);
 					break;
@@ -390,8 +398,13 @@ namespace Twirc.Lib
 		/// <param name="line">Line of data to parse.</param>
 		private static void ParseChannelViewers(Channel channel, string line)
 		{
-			foreach(var name in line.To(" :").Split(' '))
+			foreach(var name in line.From(" :").Split(' '))
+			{
+				if(channel.Users.Contains(name))
+					continue;
+
 				channel.Users.Add(name);
+			}
 		}
 	}
 }

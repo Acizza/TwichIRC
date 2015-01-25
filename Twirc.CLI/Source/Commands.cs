@@ -37,10 +37,7 @@ namespace Twirc.CLI
 			{
 				if(!Program.Client.IsConnectedTo(channel))
 				{
-					Program.WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", Program.GetTime());
-					Program.Write(ConsoleColor.White, "Not connected to ");
-					Program.WriteLine(ConsoleColor.DarkYellow, channel);
-
+					PrintChannelNotFoundError(channel);
 					continue;
 				}
 
@@ -52,12 +49,7 @@ namespace Twirc.CLI
 		public static void Send(string[] args)
 		{
 			if(!Program.Client.SendMessage(args[0], String.Join(" ", args.Skip(1).ToArray())))
-			{
-				Program.WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", Program.GetTime());
-				Program.Write(ConsoleColor.White, "Must be connected to ");
-				Program.Write(ConsoleColor.DarkYellow, args[0]);
-				Program.WriteLine(ConsoleColor.White, " to send a message");
-			}
+				PrintChannelNotFoundError(args[0]);
 		}
 
 		[Command("channels", 0, "", "Lists all currently connected channels.")]
@@ -72,6 +64,49 @@ namespace Twirc.CLI
 
 				++index;
 			}
+		}
+
+		[Command("viewers", 1, "<channel>", "Lists all viewers connected to the specified channel.")]
+		public static void Viewers(string[] args)
+		{
+			var channel = Program.Client.GetChannelByName(args[0]);
+
+			if(channel == null)
+			{
+				PrintChannelNotFoundError(args[0]);
+				return;
+			}
+
+			uint index = 1;
+
+			foreach(var user in channel.Users)
+			{
+				Program.Write(ConsoleColor.DarkYellow, index.ToString());
+				Program.WriteLine(ConsoleColor.White, ". " + user);
+
+				++index;
+			}
+		}
+
+		[Command("hasviewer", 2, "<channel> <viewer name>", "Outputs whether or not the specified channel viewer is connected.")]
+		public static void HasViewer(string[] args)
+		{
+			var channel = Program.Client.GetChannelByName(args[0]);
+
+			if(channel == null)
+			{
+				PrintChannelNotFoundError(args[0]);
+				return;
+			}
+
+			var viewerName   = String.Join(" ", args.Skip(1).ToArray());
+			bool isConnected = channel.Users.Contains(viewerName);
+
+			Program.WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", Program.GetTime());
+			Program.Write(ConsoleColor.White, "Viewer ");
+			Program.Write(ConsoleColor.DarkYellow, viewerName);
+			Program.Write(ConsoleColor.White, (isConnected ? " is " : " isn't ") + "connected to ");
+			Program.WriteLine(ConsoleColor.DarkYellow, args[0]);
 		}
 
 		[Command("help", 1, "<command>", "Displays the information for the specified command.")]
@@ -115,6 +150,13 @@ namespace Twirc.CLI
 		public static void Exit(string[] args)
 		{
 			Environment.Exit(0);
+		}
+
+		private static void PrintChannelNotFoundError(string channel)
+		{
+			Program.WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", Program.GetTime());
+			Program.Write(ConsoleColor.White, "Not connected to ");
+			Program.WriteLine(ConsoleColor.DarkYellow, channel);
 		}
 	}
 }

@@ -8,13 +8,6 @@ namespace Twirc.Lib
 		public string Message;
 		public bool Success;
 
-		public static readonly LoginResponse Successful = new LoginResponse
-		{
-			Code    = "0",
-			Message = "",
-			Success = true
-		};
-
 		public LoginResponse(bool success, string code, string message)
 		{
 			Code    = code;

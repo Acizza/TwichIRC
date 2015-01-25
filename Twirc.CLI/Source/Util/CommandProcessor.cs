@@ -12,10 +12,7 @@ namespace Twirc.CLI.Util
 
 		public static ReadOnlyDictionary<string, Tuple<CommandAttribute, CommandDel>> Commands
 		{
-			get
-			{
-				return new ReadOnlyDictionary<string, Tuple<CommandAttribute, CommandDel>>(_commands);
-			}
+			get { return new ReadOnlyDictionary<string, Tuple<CommandAttribute, CommandDel>>(_commands); }
 		}
 
 		private static readonly Dictionary<string, Tuple<CommandAttribute, CommandDel>> _commands;
