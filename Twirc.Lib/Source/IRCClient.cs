@@ -214,18 +214,38 @@ namespace Twirc.Lib
 			return _channels.Any(x => x.Name == channel);
 		}
 
+		public Channel GetChannelByName(string channel)
+		{
+			return _channels.Find(x => x.Name == channel);
+		}
+
 		/// <summary>
 		/// Leaves the specified channel.
 		/// </summary>
 		/// <param name="channelName">Channel.</param>
 		public void Leave(string channelName)
 		{
-			var channel = _channels.Find(x => x.Name == channelName);
+			var channel = GetChannelByName(channelName);
 
 			SendLine("PART #" + channelName);
 			_channels.Remove(channel);
 
 			OnLeave.Invoke(channel, Username);
+		}
+
+		/// <summary>
+		/// Sends a chat message to the specified channel.
+		/// </summary>
+		/// <returns><c>true</c>, if message was sent, <c>false</c> otherwise.</returns>
+		/// <param name="channelName">Channel name.</param>
+		/// <param name="message">Message.</param>
+		public bool SendMessage(string channelName, string message)
+		{
+			if(!IsConnectedTo(channelName))
+				return false;
+
+			SendLine("PRIVMSG #" + channelName + " :" + message);
+			return true;
 		}
 
 		/// <summary>
@@ -280,7 +300,7 @@ namespace Twirc.Lib
 		{
 			if(!LoggedIn)
 			{
-				var channel = _channels.Find(x => x.Name == line.From("#"));
+				var channel = GetChannelByName(line.From("#"));
 
 				switch(code)
 				{
@@ -328,7 +348,7 @@ namespace Twirc.Lib
 				return;
 			}
 
-			var channel = _channels.Find(x => x.Name == line.Range("#", 0, " ", "\r"));
+			var channel = GetChannelByName(line.Range("#", 0, " ", "\r"));
 
 			if(channel == null)
 				return;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 
@@ -8,6 +9,14 @@ namespace Twirc.CLI.Util
 	public static class CommandProcessor
 	{
 		public delegate void CommandDel(string[] args);
+
+		public static ReadOnlyDictionary<string, Tuple<CommandAttribute, CommandDel>> Commands
+		{
+			get
+			{
+				return new ReadOnlyDictionary<string, Tuple<CommandAttribute, CommandDel>>(_commands);
+			}
+		}
 
 		private static readonly Dictionary<string, Tuple<CommandAttribute, CommandDel>> _commands;
 
