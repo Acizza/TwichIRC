@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using Twirc.Lib.Util;
@@ -9,34 +10,29 @@ namespace Twirc.Lib
 {
 	public sealed class IRCClient : IDisposable
 	{
-		public delegate void ConnectDel(string host, int port);
-		public delegate void LoginDel(LoginResponse response, string username, string password);
-		public delegate void JoinDel(string channel, string username);
-		public delegate void MessageDel(string channel, string user, string message);
-		public delegate void LeaveDel(string channel, string username);
-
 		/// <summary>
 		/// The socket used for sending and receiving data from the server.
 		/// </summary>
 		/// <value>The socket.</value>
 		public Socket Socket { get; private set; }
 
-		/// <summary>
-		/// A value indicating if the client is logged in to the connected server.
-		/// </summary>
-		/// <value><c>true</c> if logged in; otherwise, <c>false</c>.</value>
-		public bool LoggedIn { get; private set; }
-
-		/// <summary>
-		/// The username currently logged in.
-		/// </summary>
-		/// <value>The username.</value>
 		public string Username { get; private set; }
+		public string Host     { get; private set; }
+		public int Port        { get; private set; }
+		public bool LoggedIn   { get; private set; }
 
 		/// <summary>
 		/// The maximum amount of bytes to read from the server.
 		/// </summary>
 		public uint MaxBufferSize = 512;
+
+		public delegate void ConnectDel(string host, int port);
+		public delegate void LoginDel(LoginResponse response, string username);
+		public delegate void JoinDel(Channel channel, string username);
+		public delegate void MessageDel(Channel channel, string username, string message);
+		public delegate void UserSubscribedDel(Channel channel, string username);
+		public delegate void LeaveDel(Channel channel, string username);
+		public delegate void LogoutDel(string username);
 
 		/// <summary>
 		/// Called when a successful connection occurs.
@@ -44,7 +40,7 @@ namespace Twirc.Lib
 		public event ConnectDel OnConnect = delegate {};
 
 		/// <summary>
-		/// Called when a successful login occurs.
+		/// Called when a response to a login request is received.
 		/// </summary>
 		public event LoginDel OnLogin = delegate {};
 
@@ -64,6 +60,11 @@ namespace Twirc.Lib
 		public event MessageDel OnMessage = delegate {};
 
 		/// <summary>
+		/// Called when a user subcribes to a connected channel.
+		/// </summary>
+		public event UserSubscribedDel OnUserSubscribed = delegate {};
+
+		/// <summary>
 		/// Called when a user leaves a connected channel.
 		/// </summary>
 		public event LeaveDel OnLeave = delegate {};
@@ -71,41 +72,7 @@ namespace Twirc.Lib
 		/// <summary>
 		/// Called when a logout is requested.
 		/// </summary>
-		public event Action OnLogout = delegate {};
-
-		/// <summary>
-		/// The host address being used. When set, <see cref="Connect"/> is called with the new information.
-		/// </summary>
-		/// <value>The host address.</value>
-		public string Host
-		{
-			get
-			{
-				return _host;
-			}
-			set
-			{
-				_host = value;
-				Connect(value, Port);
-			}
-		}
-
-		/// <summary>
-		/// The port being used. When set, <see cref="Connect"/> is called with the new information. 
-		/// </summary>
-		/// <value>The port.</value>
-		public int Port
-		{
-			get
-			{
-				return _port;
-			}
-			set
-			{
-				_port = value;
-				Connect(Host, value);
-			}
-		}
+		public event LogoutDel OnLogout = delegate {};
 
 		/// <summary>
 		/// Returns true if the socket being used is not null and is connected.
@@ -113,31 +80,23 @@ namespace Twirc.Lib
 		/// <value><c>true</c> if connected; otherwise, <c>false</c>.</value>
 		public bool Alive
 		{
-			get
-			{
-				return Socket != null && Socket.Connected;
-			}
+			get { return Socket != null && Socket.Connected; }
 		}
 
 		/// <summary>
 		/// The list of currently connected channels.
 		/// </summary>
 		/// <value>The channels.</value>
-		public ReadOnlyCollection<string> Channels
+		public ReadOnlyCollection<Channel> Channels
 		{
-			get
-			{
-				return _channels.AsReadOnly();
-			}
+			get { return _channels.AsReadOnly(); }
 		}
 
-		string _host;
-		int _port;
-		List<string> _channels;
+		private List<Channel> _channels;
 
 		public IRCClient()
 		{
-			_channels = new List<string>();
+			_channels = new List<Channel>();
 		}
 
 		public IRCClient(string host, int port) : this()
@@ -156,118 +115,14 @@ namespace Twirc.Lib
 		}
 
 		/// <summary>
-		/// Checks any codes sent by the server to see if a login attempt was successful.
+		/// Disconnects from the server and closes the socket.
 		/// </summary>
-		/// <returns><c>true</c>, if login was successful, <c>false</c> otherwise.</returns>
-		LoginResponse VerifyLogin()
+		public void Dispose()
 		{
-			// TODO: Add an anti-blocking mechanism to avoid this hanging *forever* if no valid codes are received.
-			string data;
-
-			while((data = ReadLine()) != null)
-			{
-				foreach(var line in data.Split('\n'))
-				{
-					string code = line.Range(" ");
-
-					if(code.Length == 0)
-						continue;
-
-					if(code == "004" || code == "375")
-					{
-						return new LoginResponse
-						{
-							Status  = LoginStatus.Success,
-							Code    = code,
-							Message = line.Range(" :", "\r")
-						};
-					}
-					if(code[0] == '5' || code[0] == '4' || code == "NOTICE")
-					{
-						return new LoginResponse
-						{
-							Status  = LoginStatus.Failed,
-							Code    = code,
-							Message = line.Range(" :", "\r")
-						};
-					}
-				}
-			}
-
-			return new LoginResponse
-			{
-				Status  = LoginStatus.Failed,
-				Code    = "-1",
-				Message = "Unknown error"
-			};
-		}
-
-		/// <summary>
-		/// Processes a special line (ex: a line prefixed with :jtv) from the server.
-		/// </summary>
-		/// <param name="code">Message code.</param>
-		/// <param name="line">Line to process.</param>
-		void ProcessSpecialLine(string code, string line)
-		{
-			// TODO: Implement
-		}
-
-		/// <summary>
-		/// Processes a standard line (ex: a message sent by someone) from the server.
-		/// </summary>
-		/// <param name="code">Message code.</param>
-		/// <param name="line">Line to process.</param>
-		void ProcessLine(string code, string line)
-		{
-			// Sending PONG after a PING request keeps the connection alive.
-			if(line.StartsWith("PING"))
-			{
-				SendLine("PONG " + line.Substring("POING".Length));
-				OnPing.Invoke();
-
+			if(!Alive)
 				return;
-			}
 
-			string username = line.Range(":", "!");
-			string channel  = line.Range("#", 0, " ", "\r");
-
-			if(username == "" ||channel == "")
-			{
-				#if DEBUG
-				// TODO: Replace with log class
-				Console.WriteLine("Received empty line with code: " + code);
-				#endif
-
-				return;
-			}
-
-			switch(code)
-			{
-				case "PRIVMSG":
-					OnMessage.Invoke(channel, username, line.Substring(line.IndexOf(':', 1) + 1));
-					break;
-
-				case "JOIN":
-					OnJoin.Invoke(channel, username);
-					break;
-
-				case "PART":
-					OnLeave.Invoke(channel, username);
-					break;
-			}
-		}
-
-		/// <summary>
-		/// Sends a line-terminated UTF-8 string to the server.
-		/// Automatically appends a line terminator to the string.
-		/// </summary>
-		/// <param name="data">Data to send.</param>
-		void SendLine(string data)
-		{
-			//if(!Alive)
-			//	return;
-
-			Socket.Send(Encoding.UTF8.GetBytes(data + '\n'));
+			Close();
 		}
 
 		/// <summary>
@@ -277,13 +132,14 @@ namespace Twirc.Lib
 		/// <param name="port">Port.</param>
 		public void Connect(string host, int port)
 		{
-			Dispose();
+			if(Alive)
+				Close();
 
 			Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 			Socket.Connect(host, port);
 
-			_host = host;
-			_port = port;
+			Host = host;
+			Port = port;
 
 			OnConnect.Invoke(host, port);
 		}
@@ -302,29 +158,106 @@ namespace Twirc.Lib
 		}
 
 		/// <summary>
-		/// Attempt to login with the specified username and password.
+		/// Reconnects using the same host and port if the host address isn't empty.
+		/// </summary>
+		public void Reconnect()
+		{
+			if(String.IsNullOrEmpty(Host))
+				return;
+
+			Connect(Host, Port);
+		}
+
+		/// <summary>
+		/// Sends a login request with the specified username and password.
 		/// </summary>
 		/// <param name="username">Username.</param>
 		/// <param name="password">Password.</param>
-		public LoginResponse Login(string username, string password)
+		public void Login(string username, string password)
 		{
 			if(!Alive)
-				return new LoginResponse(LoginStatus.NotConnected, "-1", "Not connected to server");
+				throw new Exception("Must be connected to login.");
+
+			if(LoggedIn)
+				Connect(Host, Port);
 
 			_channels.Clear();
+
+			Username = username;
+			LoggedIn = false;
 
 			SendLine("PASS " + password);
 			SendLine("NICK " + username);
 			SendLine("USER " + username + " 8 * :" + username);
+		}
 
-			var loginInfo = VerifyLogin();
+		/// <summary>
+		/// Logs out from the server.
+		/// </summary>
+		public void Logout()
+		{
+			if(!LoggedIn)
+				throw new Exception("Must be logged in to logout.");
 
-			Username = username;
-			LoggedIn = loginInfo.Status == LoginStatus.Success;
+			LoggedIn = false;
+			SendLine("QUIT :Logout");
 
-			OnLogin.Invoke(loginInfo, username, password);
+			OnLogout.Invoke(Username);
+			_channels.Clear();
+		}
 
-			return loginInfo;
+		/// <summary>
+		/// Joins the specified channel.
+		/// </summary>
+		/// <param name="channel">Channel name.</param>
+		public void Join(string channel)
+		{
+			SendLine("JOIN #" + channel);
+			_channels.Add(new Channel(channel));
+		}
+
+		/// <summary>
+		/// Returns true if the client is currently connected to the specified channel.
+		/// </summary>
+		/// <returns><c>true</c> if this instance is connected to the specified channel; otherwise, <c>false</c>.</returns>
+		/// <param name="channel">Channel.</param>
+		public bool IsConnectedTo(string channel)
+		{
+			return _channels.Any(x => x.Name == channel);
+		}
+
+		public Channel GetChannelByName(string channel)
+		{
+			return _channels.Find(x => x.Name == channel);
+		}
+
+		/// <summary>
+		/// Leaves the specified channel.
+		/// </summary>
+		/// <param name="channelName">Channel.</param>
+		public void Leave(string channelName)
+		{
+			var channel = GetChannelByName(channelName);
+
+			SendLine("PART #" + channelName);
+			_channels.Remove(channel);
+
+			OnLeave.Invoke(channel, Username);
+		}
+
+		/// <summary>
+		/// Sends a chat message to the specified channel.
+		/// </summary>
+		/// <returns><c>true</c>, if message was sent, <c>false</c> otherwise.</returns>
+		/// <param name="channelName">Channel name.</param>
+		/// <param name="message">Message.</param>
+		public bool SendMessage(string channelName, string message)
+		{
+			if(!IsConnectedTo(channelName))
+				return false;
+
+			SendLine("PRIVMSG #" + channelName + " :" + message);
+			return true;
 		}
 
 		/// <summary>
@@ -343,11 +276,31 @@ namespace Twirc.Lib
 		}
 
 		/// <summary>
+		/// Sends a line-terminated UTF-8 string to the server.
+		/// Automatically appends a line terminator to the string.
+		/// </summary>
+		/// <param name="data">Data to send.</param>
+		private void SendLine(string data)
+		{
+			Socket.Send(Encoding.UTF8.GetBytes(data + "\n"));
+		}
+
+		/// <summary>
 		/// Reads and processes the next line from the server.
 		/// </summary>
 		public void ProcessNextLine()
 		{
+			if(!Alive)
+				return;
+
 			string data = ReadLine();
+
+			// If no data is received, the server closed the connection.
+			if(data.Length == 0)
+			{
+				Close();
+				return;
+			}
 
 			foreach(var line in data.Split('\n'))
 			{
@@ -356,6 +309,9 @@ namespace Twirc.Lib
 
 				string code = line.Range(" ", " ");
 
+				if(code.Length > 0)
+					ProcessCode(code, line);
+
 				if(line.StartsWith(":jtv "))
 					ProcessSpecialLine(code, line);
 				else
@@ -363,80 +319,124 @@ namespace Twirc.Lib
 			}
 		}
 
-		/// <summary>
-		/// Joins the specified channel.
-		/// </summary>
-		/// <param name="channel">Channel name.</param>
-		public void Join(string channel)
+		private void ProcessCode(string code, string line)
 		{
-			SendLine("JOIN #" + channel);
-			_channels.Add(channel);
+			switch(code)
+			{
+				case "353":
+					// TODO: Make list of channels available when a channel is joined
+					var channel = GetChannelByName(line.Range("#", 0, " ", "\r"));
+
+					if(channel != null)
+						ParseChannelViewers(channel, line);
+
+					break;
+
+				case "004":
+				case "375":
+					if(LoggedIn)
+						break;
+
+					LoggedIn = true;
+					OnLogin.Invoke(new LoginResponse(true, code, "Login successful."), Username);
+					break;
+			}
+
+			if(code[0] == '5' || code[0] == '4' || code == "NOTICE")
+				OnLogin.Invoke(new LoginResponse(false, code, line.From(" :")), Username);
 		}
 
 		/// <summary>
-		/// Leaves the specified channel.
+		/// Processes a special line (ex: a line prefixed with :jtv) from the server.
 		/// </summary>
-		/// <param name="channel">Channel.</param>
-		public void Leave(string channel)
+		/// <param name="code">Message code.</param>
+		/// <param name="line">Line to process.</param>
+		private void ProcessSpecialLine(string code, string line)
 		{
-			SendLine("PART #" + channel);
-			_channels.Remove(channel);
+			// TODO: Implement
 		}
 
+		// TODO: Refactor
 		/// <summary>
-		/// Logs out from the server.
+		/// Processes a standard line (ex: a message sent by someone) from the server.
 		/// </summary>
-		public void Logout()
+		/// <param name="code">Message code.</param>
+		/// <param name="line">Line to process.</param>
+		private void ProcessLine(string code, string line)
 		{
-			if(!Alive || !LoggedIn)
+			// Sending PONG after a PING request keeps the connection alive.
+			if(line.StartsWith("PING"))
+			{
+				SendLine(line.From("PONG ", false));
+				OnPing.Invoke();
+
+				return;
+			}
+
+			var channel = GetChannelByName(line.Range("#", 0, " ", "\r"));
+
+			if(channel == null)
 				return;
 
-			SendLine("QUIT :Logout");
+			string username = line.Range(":", "!");
 
-			OnLogout.Invoke();
-			_channels.Clear();
+			if(username.Length == 0)
+				return;
+
+			// Assume anything from twitchnotify is a subscription (for now)
+			if(username == "twitchnotify")
+			{
+				OnUserSubscribed.Invoke(channel, line.Range(":", " ", 1));
+				return;
+			}
+
+			switch(code)
+			{
+				case "PRIVMSG":
+					OnMessage.Invoke(channel, username, line.From(":", true, 1));
+					break;
+
+				case "JOIN":
+					if(channel.Users.Contains(username))
+						break;
+
+					channel.Users.Add(username);
+					OnJoin.Invoke(channel, username);
+					break;
+
+				case "PART":
+					if(!channel.Users.Contains(username))
+						break;
+
+					channel.Users.Remove(username);
+					OnLeave.Invoke(channel, username);
+					break;
+			}
 		}
 
 		/// <summary>
-		/// Disconnects from the server and closes the socket.
+		/// Parses a message containing the list of viewers and adds them to the channel's user list.
 		/// </summary>
-		public void Dispose()
+		/// <param name="channel">Channel to add the users to.</param>
+		/// <param name="line">Line of data to parse.</param>
+		private static void ParseChannelViewers(Channel channel, string line)
 		{
-			if(!Alive)
-				return;
+			foreach(var name in line.From(" :").Split(' '))
+			{
+				if(channel.Users.Contains(name))
+					continue;
 
-			Logout();
+				channel.Users.Add(name);
+			}
+		}
 
+		/// <summary>
+		/// Shuts down and closes the socket.
+		/// </summary>
+		public void Close()
+		{
 			Socket.Shutdown(SocketShutdown.Both);
 			Socket.Close();
-		}
-	}
-
-	public enum LoginStatus
-	{
-		Success,
-		Failed,
-		NotConnected
-	}
-
-	public struct LoginResponse
-	{
-		public LoginStatus Status;
-		public string Code;
-		public string Message;
-
-		public static readonly LoginResponse Default = new LoginResponse
-		{
-			Status  = LoginStatus.Failed,
-			Code    = "0",
-			Message = ""
-		};
-
-		public LoginResponse(LoginStatus status, string code, string message)
-		{
-			Status  = status;
-			Code    = code;
-			Message = message;
 		}
 	}
 }

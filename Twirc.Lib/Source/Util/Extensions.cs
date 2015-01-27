@@ -18,7 +18,7 @@ namespace Twirc.Lib.Util
 			if(startIdx < 0)
 				return "";
 
-			int endIdx = source.IndexOf(end, startIdx + offset + 1); // Add 1 to skip the start index in case they're the same
+			int endIdx = source.IndexOf(end, startIdx + 1); // Add 1 to skip the start index in case they're the same
 
 			if(endIdx < 0)
 				return "";
@@ -56,7 +56,7 @@ namespace Twirc.Lib.Util
 
 			foreach(var end in ends)
 			{
-				endIdx = source.IndexOf(end, startIdx + offset + 1); // Add 1 to skip the start index in case they're the same
+				endIdx = source.IndexOf(end, startIdx + 1); // Add 1 to skip the start index in case they're the same
 
 				if(endIdx != -1)
 				{
@@ -81,6 +81,40 @@ namespace Twirc.Lib.Util
 		public static string Range(this string source, string start, int offset, params string[] ends)
 		{
 			return source.Range(start, ends, offset);
+		}
+
+		/// <summary>
+		/// Returns a string up until the string to.
+		/// </summary>
+		/// <param name="source">Source string.</param>
+		/// <param name="to">String to return at.</param>
+		/// <param name="exclude">If set to <c>true</c>, the to string is excluded from the end of the returned string.</param>
+		/// <param name="offset">Index to start looking for the to string.</param>
+		public static string To(this string source, string to, bool exclude = true, int offset = 0)
+		{
+			int idx = source.IndexOf(to, offset);
+
+			if(idx == -1)
+				return "";
+
+			return source.Substring(0, exclude ? idx + to.Length : idx);
+		}
+
+		/// <summary>
+		/// Returns a string starting from the string fromStr.
+		/// </summary>
+		/// <param name="source">Source string.</param>
+		/// <param name="fromStr">String to start at.</param>
+		/// <param name="exclude">If set to <c>true</c>, the fromStr string is excluded from the beginning of the returned string.</param>
+		/// <param name="offset">Index to start looking for the fromStr string..</param>
+		public static string From(this string source, string fromStr, bool exclude = true, int offset = 0)
+		{
+			int idx = source.IndexOf(fromStr, offset);
+
+			if(idx == -1)
+				return "";
+
+			return source.Substring(exclude ? idx + fromStr.Length : idx);
 		}
 	}
 }
