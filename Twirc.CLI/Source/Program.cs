@@ -34,6 +34,21 @@ namespace Twirc.CLI
 			RunClient(username, password);
 		}
 
+		/// <summary>
+		/// Starts a new thread that will process every line from the IRC client until it is closed.
+		/// </summary>
+		public static void StartProcessing()
+		{
+			var processThread = new Thread(_ =>
+			{
+				while(Client.Alive)
+					Client.ProcessNextLine();
+			});
+
+			processThread.IsBackground = true;
+			processThread.Start();
+		}
+
 		private static void RunClient(string username, string password)
 		{
 			// This address can also be used: 199.9.250.117:443
@@ -42,23 +57,21 @@ namespace Twirc.CLI
 				InitializeClient(Client);
 
 				if(!String.IsNullOrEmpty(username) && !String.IsNullOrEmpty(password))
-					Client.Login(username, password);
-
-				var processThread = new Thread(_ =>
 				{
-					while(Client.Alive)
-						Client.ProcessNextLine();
-				});
-
-				processThread.IsBackground = true;
-				processThread.Start();
+					Client.Login(username, password);
+					StartProcessing();
+				}
+				else
+				{
+					Console.WriteLine("Tip: use the \"login\" command (help login) or \"commands\".");
+				}
 
 				while(true)
 				{
 					var result = CommandProcessor.Process(Console.ReadLine());
 
 					if(!result.Item2)
-						WriteLine(ConsoleColor.Red, "ERROR: " + result.Item1);
+						WriteLine(ConsoleColor.Red, result.Item1);
 				}
 			}
 		}
@@ -84,6 +97,14 @@ namespace Twirc.CLI
 					Write(ConsoleColor.White, "]: ");
 					WriteLine(ConsoleColor.Red, response.Message);
 				}
+			};
+
+			client.OnLogout += username =>
+			{
+				WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+				Write(ConsoleColor.White, "User ");
+				Write(ConsoleColor.DarkYellow, username);
+				WriteLine(ConsoleColor.White, " logged out");
 			};
 
 			client.OnJoin += (channel, username) =>

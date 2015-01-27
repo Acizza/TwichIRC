@@ -61,9 +61,10 @@ namespace Twirc.CLI.Util
 			if(comArgs.Length < command.Item1.MinimumArguments)
 			{
 				return Tuple.Create(String.Format(
-					"Expected {0} arguments, got {1}.",
+					"Expected {0} arguments, got {1}.\nUsage: {2}",
 					command.Item1.MinimumArguments,
-					comArgs.Length),
+					comArgs.Length,
+					command.Item1.Usage),
 					false);
 			}
 

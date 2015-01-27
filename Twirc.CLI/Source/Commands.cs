@@ -1,6 +1,6 @@
 ﻿using System;
-using Twirc.CLI.Util;
 using System.Linq;
+using Twirc.CLI.Util;
 
 namespace Twirc.CLI
 {
@@ -9,12 +9,22 @@ namespace Twirc.CLI
 		[Command("login", 2, "<user> <pass>", "Login with the specified information.")]
 		public static void Login(string[] args)
 		{
+			if(!Program.Client.Alive)
+				Program.Client.Reconnect();
+
 			Program.Client.Login(args[0], args[1]);
+			Program.StartProcessing();
 		}
 
 		[Command("join", 1, "<channels>", "Joins all specified channels separated by space.")]
 		public static void Join(string[] args)
 		{
+			if(!Program.Client.LoggedIn)
+			{
+				PrintNotLoggedInError();
+				return;
+			}
+
 			foreach(var channel in args)
 			{
 				if(Program.Client.IsConnectedTo(channel))
@@ -33,6 +43,12 @@ namespace Twirc.CLI
 		[Command("leave", 1, "<channels>", "Leaves all specified channels separated by space.")]
 		public static void Leave(string[] args)
 		{
+			if(!Program.Client.LoggedIn)
+			{
+				PrintNotLoggedInError();
+				return;
+			}
+
 			foreach(var channel in args)
 			{
 				if(!Program.Client.IsConnectedTo(channel))
@@ -66,7 +82,7 @@ namespace Twirc.CLI
 			}
 		}
 
-		[Command("viewers", 1, "<channel>", "Lists all viewers connected to the specified channel.")]
+		[Command("users", 1, "<channel>", "Lists all users connected to the specified channel.")]
 		public static void Viewers(string[] args)
 		{
 			var channel = Program.Client.GetChannelByName(args[0]);
@@ -88,7 +104,8 @@ namespace Twirc.CLI
 			}
 		}
 
-		[Command("hasviewer", 2, "<channel> <viewer name>", "Outputs whether or not the specified channel viewer is connected.")]
+		[Command("hasuser", 2, "<channel> <username>",
+			"Outputs whether or not the specified user is connected to the specified channel.")]
 		public static void HasViewer(string[] args)
 		{
 			var channel = Program.Client.GetChannelByName(args[0]);
@@ -103,7 +120,7 @@ namespace Twirc.CLI
 			bool isConnected = channel.Users.Contains(viewerName);
 
 			Program.WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", Program.GetTime());
-			Program.Write(ConsoleColor.White, "Viewer ");
+			Program.Write(ConsoleColor.White, "User ");
 			Program.Write(ConsoleColor.DarkYellow, viewerName);
 			Program.Write(ConsoleColor.White, (isConnected ? " is " : " isn't ") + "connected to ");
 			Program.WriteLine(ConsoleColor.DarkYellow, args[0]);
@@ -146,6 +163,18 @@ namespace Twirc.CLI
 			}
 		}
 
+		[Command("logout", 0, "", "Logs out the current user.")]
+		public static void Logout(string[] args)
+		{
+			if(!Program.Client.LoggedIn)
+			{
+				PrintNotLoggedInError();
+				return;
+			}
+
+			Program.Client.Logout();
+		}
+
 		[Command("exit", 0, "", "Exits the program.")]
 		public static void Exit(string[] args)
 		{
@@ -157,6 +186,12 @@ namespace Twirc.CLI
 			Program.WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", Program.GetTime());
 			Program.Write(ConsoleColor.White, "Not connected to ");
 			Program.WriteLine(ConsoleColor.DarkYellow, channel);
+		}
+
+		private static void PrintNotLoggedInError()
+		{
+			Program.WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", Program.GetTime());
+			Program.WriteLine(ConsoleColor.White, "Not logged in");
 		}
 	}
 }

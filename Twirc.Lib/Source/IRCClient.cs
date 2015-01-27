@@ -32,6 +32,7 @@ namespace Twirc.Lib
 		public delegate void MessageDel(Channel channel, string username, string message);
 		public delegate void UserSubscribedDel(Channel channel, string username);
 		public delegate void LeaveDel(Channel channel, string username);
+		public delegate void LogoutDel(string username);
 
 		/// <summary>
 		/// Called when a successful connection occurs.
@@ -71,7 +72,7 @@ namespace Twirc.Lib
 		/// <summary>
 		/// Called when a logout is requested.
 		/// </summary>
-		public event Action OnLogout = delegate {};
+		public event LogoutDel OnLogout = delegate {};
 
 		/// <summary>
 		/// Returns true if the socket being used is not null and is connected.
@@ -121,8 +122,7 @@ namespace Twirc.Lib
 			if(!Alive)
 				return;
 
-			Socket.Shutdown(SocketShutdown.Both);
-			Socket.Close();
+			Close();
 		}
 
 		/// <summary>
@@ -132,7 +132,8 @@ namespace Twirc.Lib
 		/// <param name="port">Port.</param>
 		public void Connect(string host, int port)
 		{
-			Dispose();
+			if(Alive)
+				Close();
 
 			Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 			Socket.Connect(host, port);
@@ -157,26 +158,37 @@ namespace Twirc.Lib
 		}
 
 		/// <summary>
-		/// Attempt to login with the specified username and password.
+		/// Reconnects using the same host and port if the host address isn't empty.
+		/// </summary>
+		public void Reconnect()
+		{
+			if(String.IsNullOrEmpty(Host))
+				return;
+
+			Connect(Host, Port);
+		}
+
+		/// <summary>
+		/// Sends a login request with the specified username and password.
 		/// </summary>
 		/// <param name="username">Username.</param>
 		/// <param name="password">Password.</param>
 		public void Login(string username, string password)
 		{
 			if(!Alive)
-				return;
+				throw new Exception("Must be connected to login.");
 
 			if(LoggedIn)
 				Connect(Host, Port);
 
 			_channels.Clear();
 
+			Username = username;
+			LoggedIn = false;
+
 			SendLine("PASS " + password);
 			SendLine("NICK " + username);
 			SendLine("USER " + username + " 8 * :" + username);
-
-			Username = username;
-			LoggedIn = false;
 		}
 
 		/// <summary>
@@ -184,12 +196,13 @@ namespace Twirc.Lib
 		/// </summary>
 		public void Logout()
 		{
-			if(!Alive || !LoggedIn)
-				return;
+			if(!LoggedIn)
+				throw new Exception("Must be logged in to logout.");
 
+			LoggedIn = false;
 			SendLine("QUIT :Logout");
 
-			OnLogout.Invoke();
+			OnLogout.Invoke(Username);
 			_channels.Clear();
 		}
 
@@ -277,7 +290,17 @@ namespace Twirc.Lib
 		/// </summary>
 		public void ProcessNextLine()
 		{
+			if(!Alive)
+				return;
+
 			string data = ReadLine();
+
+			// If no data is received, the server closed the connection.
+			if(data.Length == 0)
+			{
+				Close();
+				return;
+			}
 
 			foreach(var line in data.Split('\n'))
 			{
@@ -405,6 +428,15 @@ namespace Twirc.Lib
 
 				channel.Users.Add(name);
 			}
+		}
+
+		/// <summary>
+		/// Shuts down and closes the socket.
+		/// </summary>
+		public void Close()
+		{
+			Socket.Shutdown(SocketShutdown.Both);
+			Socket.Close();
 		}
 	}
 }
