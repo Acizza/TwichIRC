@@ -2,9 +2,9 @@
 
 namespace Twirc.CLI.Util
 {
-	public struct OptionDesc
+	public struct ConfigDescription
 	{
-		public Action<string> Function;
+		public Action<string> Callback;
 		public string Description;
 
 		/// <summary>
@@ -12,9 +12,9 @@ namespace Twirc.CLI.Util
 		/// </summary>
 		public string FullName;
 
-		public OptionDesc(Action<string> function, string description)
+		public ConfigDescription(Action<string> callback, string description)
 		{
-			Function    = function;
+			Callback    = callback;
 			Description = description;
 			FullName    = "";
 		}

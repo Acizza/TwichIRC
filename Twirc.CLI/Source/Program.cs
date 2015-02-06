@@ -14,24 +14,30 @@ namespace Twirc.CLI
 
 		private static void Main(string[] args)
 		{
-			var options = new OptionParser();
+			var config = new ConfigParser();
 
 			string username = null;
 			string password = null;
+			bool autoLogin  = true;
 			_joinChannels   = new List<string>();
 
-			options["u|user|username"] = new OptionDesc(
-				v => username = v,
-				"Username to use for login.");
+			config.Add("u|user|username", v => username = v, "Username to use for login.");
+			config.Add("p|pass|oauth|o|password", v => password = v, "The password / oauth key to use for login.");
+			config.Add("f|file|parse", config.ParseFile, "Parses a configuration file.");
+			config.Add("j|join", _joinChannels.Add, "Joins the specified channel on login.");
+			config.Add("a|al|autologin|auto-login", v => autoLogin = bool.Parse(v), "Enables / disables auto-login.");
+			config.Add("h|help", v =>
+			{
+				config.PrintHelp();
+				Environment.Exit(0);
+			}, "Prints information about all command-line parameters.");
 
-			options["p|pass|oauth|o|password"] = new OptionDesc(
-				v => password = v,
-				"The password / oauth key to use for login.");
+			config.OnOtherArgument += _joinChannels.Add;
 
-			options.OnOtherArgument += _joinChannels.Add;
-			options.Parse(args);
+			config.ParseSettingsFile();
+			config.Parse(String.Join(" ", args));
 
-			RunClient(username, password);
+			RunClient(username, password, autoLogin);
 		}
 
 		/// <summary>
@@ -49,14 +55,14 @@ namespace Twirc.CLI
 			processThread.Start();
 		}
 
-		private static void RunClient(string username, string password)
+		private static void RunClient(string username, string password, bool autoLogin)
 		{
 			// This address can also be used: 199.9.250.117:443
 			using(Client = new IRCClient("irc.twitch.tv", 6667))
 			{
 				InitializeClient(Client);
 
-				if(!String.IsNullOrEmpty(username) && !String.IsNullOrEmpty(password))
+				if(autoLogin && !String.IsNullOrEmpty(username) && !String.IsNullOrEmpty(password))
 				{
 					Client.Login(username, password);
 					StartProcessing();

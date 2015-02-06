@@ -20,7 +20,4 @@ Global
 		{5BD8BC07-74BD-4274-A831-5141BC955A4C}.Release|x86.ActiveCfg = Release|x86
 		{5BD8BC07-74BD-4274-A831-5141BC955A4C}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
-	GlobalSection(MonoDevelopProperties) = preSolution
-		StartupItem = Twirc.CLI\Twirc.CLI.csproj
-	EndGlobalSection
 EndGlobal

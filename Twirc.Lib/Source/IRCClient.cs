@@ -17,14 +17,29 @@ namespace Twirc.Lib
 		public Socket Socket { get; private set; }
 
 		public string Username { get; private set; }
-		public string Host     { get; private set; }
-		public int Port        { get; private set; }
 		public bool LoggedIn   { get; private set; }
 
 		/// <summary>
-		/// The maximum amount of bytes to read from the server.
+		/// The amount of bytes currently being read from the server.
 		/// </summary>
-		public uint MaxBufferSize = 512;
+		/// <value>The size of the max buffer.</value>
+		public uint CurrentBufferSize { get; private set; }
+
+		/// <summary>
+		/// Returns true if the server information (host, port) has been changed since the last connection.
+		/// </summary>
+		/// <value><c>true</c> if the server information changed; otherwise, <c>false</c>.</value>
+		public bool ConnectInfoDirty { get; private set; }
+
+		/// <summary>
+		/// The maximum amount of bytes to read from the server for the join user list.
+		/// </summary>
+		public uint MaxJoinBufferSize = 64 * 1024;
+
+		/// <summary>
+		/// The maximum amount of bytes to read from the server for messages.
+		/// </summary>
+		public uint MaxMessageBufferSize = 512;
 
 		public delegate void ConnectDel(string host, int port);
 		public delegate void LoginDel(LoginResponse response, string username);
@@ -74,6 +89,36 @@ namespace Twirc.Lib
 		/// </summary>
 		public event LogoutDel OnLogout = delegate {};
 
+		public string Host
+		{
+			get
+			{
+				return _host;
+			}
+			set
+			{
+				if(_host != value)
+					ConnectInfoDirty = true;
+
+				_host = value;
+			}
+		}
+
+		public int Port
+		{
+			get
+			{
+				return _port;
+			}
+			set
+			{
+				if(_port != value)
+					ConnectInfoDirty = true;
+
+				_port = value;
+			}
+		}
+
 		/// <summary>
 		/// Returns true if the socket being used is not null and is connected.
 		/// </summary>
@@ -93,10 +138,13 @@ namespace Twirc.Lib
 		}
 
 		private List<Channel> _channels;
+		private string _host;
+		private int _port;
 
 		public IRCClient()
 		{
 			_channels = new List<Channel>();
+			CurrentBufferSize = MaxMessageBufferSize;
 		}
 
 		public IRCClient(string host, int port) : this()
@@ -106,7 +154,7 @@ namespace Twirc.Lib
 
 		public IRCClient(string host, int port, string username, string password) : this()
 		{
-			Connect(host, port, username, password);
+			ConnectAndLogin(host, port, username, password);
 		}
 
 		~IRCClient()
@@ -126,6 +174,14 @@ namespace Twirc.Lib
 		}
 
 		/// <summary>
+		/// Connects to the server specified by the Host and Port fields.
+		/// </summary>
+		public void Connect()
+		{
+			Connect(Host, Port);
+		}
+
+		/// <summary>
 		/// Connects to the specified server.
 		/// </summary>
 		/// <param name="host">Host.</param>
@@ -138,8 +194,9 @@ namespace Twirc.Lib
 			Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 			Socket.Connect(host, port);
 
-			Host = host;
-			Port = port;
+			_host = host;
+			_port = port;
+			ConnectInfoDirty = false;
 
 			OnConnect.Invoke(host, port);
 		}
@@ -151,7 +208,7 @@ namespace Twirc.Lib
 		/// <param name="port">Port.</param>
 		/// <param name="username">Username.</param>
 		/// <param name="password">Password.</param>
-		public void Connect(string host, int port, string username, string password)
+		public void ConnectAndLogin(string host, int port, string username, string password)
 		{
 			Connect(host, port);
 			Login(username, password);
@@ -212,8 +269,8 @@ namespace Twirc.Lib
 		/// <param name="channel">Channel name.</param>
 		public void Join(string channel)
 		{
+			CurrentBufferSize = MaxJoinBufferSize;
 			SendLine("JOIN #" + channel);
-			_channels.Add(new Channel(channel));
 		}
 
 		/// <summary>
@@ -269,7 +326,7 @@ namespace Twirc.Lib
 			if(!Alive)
 				return "";
 
-			var buffer = new byte[MaxBufferSize];
+			var buffer = new byte[CurrentBufferSize];
 			int read   = Socket.Receive(buffer);
 
 			return Encoding.UTF8.GetString(buffer, 0, read);
@@ -323,13 +380,24 @@ namespace Twirc.Lib
 		{
 			switch(code)
 			{
+				// TODO: Write a class to handle joins. Incomplete names are sometimes sent as a second message.
 				case "353":
-					// TODO: Make list of channels available when a channel is joined
-					var channel = GetChannelByName(line.Range("#", 0, " ", "\r"));
+					var channelName = line.Range("#", 0, " ", "\r");
+					var channel     = GetChannelByName(channelName);
 
-					if(channel != null)
-						ParseChannelViewers(channel, line);
+					if(channel == null)
+					{
+						channel = new Channel(channelName);
+						_channels.Add(channel);
 
+						OnJoin.Invoke(channel, Username);
+					}
+
+					ParseChannelViewers(channel, line);
+					break;
+
+				case "356": // End of join list, so restore the receive rate.
+					CurrentBufferSize = MaxMessageBufferSize;
 					break;
 
 				case "004":
@@ -383,7 +451,7 @@ namespace Twirc.Lib
 			if(username.Length == 0)
 				return;
 
-			// Assume anything from twitchnotify is a subscription (for now)
+			// Assume anything from twitchnotify is a subscription (for now).
 			if(username == "twitchnotify")
 			{
 				OnUserSubscribed.Invoke(channel, line.Range(":", " ", 1));
@@ -401,7 +469,11 @@ namespace Twirc.Lib
 						break;
 
 					channel.Users.Add(username);
-					OnJoin.Invoke(channel, username);
+
+					// Only send the join for users other than ourself, so we can send the proper join with a list of viewers later.
+					if(username != Username)
+						OnJoin.Invoke(channel, username);
+
 					break;
 
 				case "PART":
