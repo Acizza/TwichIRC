@@ -19,7 +19,7 @@ namespace Twirc.CLI.Util
 		/// <summary>
 		/// The char used to identify parameters from other arguments.
 		/// </summary>
-		public const char ArgSpecifier  = '-';
+		public const char ArgSpecifier = '-';
 
 		/// <summary>
 		/// The list of options currently being used for parsing.
@@ -76,33 +76,28 @@ namespace Twirc.CLI.Util
 		/// Parses the specified line for settings and executes them.
 		/// </summary>
 		/// <param name="line">Line to parse.</param>
-		public void Parse(string line)
+		public void Parse(string[] args)
 		{
-			_Parse(line, false);
+			_Parse(args, false);
 		}
 
-		private void _Parse(string line, bool isFile)
+		private void _Parse(string[] args, bool isFile)
 		{
-			if(String.IsNullOrWhiteSpace(line))
+			if(args.Length == 0)
 				return;
 
-			if(!isFile && OnOtherArgument != null)
+			foreach(var arg in args)
 			{
-				// Process the list of other arguments.
-				line.Split(' ', '\n')
-					.Where(x => x.Length > 0 && x[0] != ArgSpecifier)
-					.ToList()
-					.ForEach(OnOtherArgument.Invoke);
-			}
+				var match = Regex.Match(arg,
+					            (isFile ? "" : ArgSpecifier + "+") + @"(\w+)\s*={0,1}\s*(.+?(?=\s+|$))?",
+					            RegexOptions.Compiled);
 
-			// (\w+)\s*={0,1}\s*(.+?)(?=\s+|$)
+				if(!match.Success)
+				{
+					OnOtherArgument.Invoke(arg);
+					continue;
+				}
 
-			var matches = Regex.Matches(line,
-				              (isFile ? "" : ArgSpecifier + "+") + @"(\w+)\s*={0,1}\s*(.+?(?=\s+|$))?",
-				              RegexOptions.Multiline | RegexOptions.Compiled);
-
-			foreach(Match match in matches)
-			{
 				var name = match.Groups[1].Value;
 
 				if(!_settings.ContainsKey(name))
@@ -114,9 +109,7 @@ namespace Twirc.CLI.Util
 					continue;
 				}
 
-				var value = match.Groups.Count > 2 ? match.Groups[2].Value : "";
-
-				_settings[name].Callback.Invoke(value);
+				_settings[name].Callback.Invoke(match.Groups[2].Value);
 			}
 		}
 
@@ -126,7 +119,7 @@ namespace Twirc.CLI.Util
 		/// <param name="path">File to parse.</param>
 		public void ParseFile(string path)
 		{
-			_Parse(File.ReadAllText(path), true);
+			_Parse(File.ReadAllLines(path), true);
 		}
 
 		/// <summary>

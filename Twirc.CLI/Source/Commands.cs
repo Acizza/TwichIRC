@@ -104,6 +104,23 @@ namespace Twirc.CLI
 			}
 		}
 
+		[Command("numusers", 1, "<channel>", "Prints the number of users connected to the specified channel.")]
+		public static void NumUsers(string[] args)
+		{
+			var channel = Program.Client.GetChannelByName(args[0]);
+
+			if(channel == null)
+			{
+				PrintChannelNotFoundError(args[0]);
+				return;
+			}
+
+			Program.WriteFmt(ConsoleColor.DarkYellow, "[{0}] {1}", Program.GetTime(), channel.Name);
+			Program.Write(ConsoleColor.White, " has ");
+			Program.Write(ConsoleColor.DarkYellow, channel.Users.Count.ToString());
+			Program.WriteLine(ConsoleColor.White, " viewer(s)");
+		}
+
 		[Command("hasuser", 2, "<channel> <username>",
 			"Outputs whether or not the specified user is connected to the specified channel.")]
 		public static void HasViewer(string[] args)

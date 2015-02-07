@@ -35,7 +35,7 @@ namespace Twirc.CLI
 			config.OnOtherArgument += _joinChannels.Add;
 
 			config.ParseSettingsFile();
-			config.Parse(String.Join(" ", args));
+			config.Parse(args);
 
 			RunClient(username, password, autoLogin);
 		}
