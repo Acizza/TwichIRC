@@ -29,7 +29,7 @@ namespace Twirc.CLI
 			{
 				if(Program.Client.IsConnectedTo(channel))
 				{
-					Program.WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", Program.GetTime());
+					Program.WriteTime();
 					Program.Write(ConsoleColor.White, "Already connected to ");
 					Program.WriteLine(ConsoleColor.DarkYellow, channel);
 
@@ -98,7 +98,7 @@ namespace Twirc.CLI
 			foreach(var user in channel.Users)
 			{
 				Program.Write(ConsoleColor.DarkYellow, index.ToString());
-				Program.WriteLine(ConsoleColor.White, ". " + user);
+				Program.WriteLine(ConsoleColor.White, ". " + user.Name);
 
 				++index;
 			}
@@ -134,9 +134,9 @@ namespace Twirc.CLI
 			}
 
 			var viewerName   = String.Join(" ", args.Skip(1).ToArray());
-			bool isConnected = channel.Users.Contains(viewerName);
+			bool isConnected = channel.HasUser(viewerName);
 
-			Program.WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", Program.GetTime());
+			Program.WriteTime();
 			Program.Write(ConsoleColor.White, "User ");
 			Program.Write(ConsoleColor.DarkYellow, viewerName);
 			Program.Write(ConsoleColor.White, (isConnected ? " is " : " isn't ") + "connected to ");
@@ -148,7 +148,7 @@ namespace Twirc.CLI
 		{
 			if(!CommandProcessor.Commands.ContainsKey(args[0]))
 			{
-				Program.WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", Program.GetTime());
+				Program.WriteTime();
 				Program.Write(ConsoleColor.White, "The specified command ");
 				Program.Write(ConsoleColor.DarkYellow, args[0]);
 				Program.WriteLine(ConsoleColor.White, " does not exist");
@@ -200,14 +200,14 @@ namespace Twirc.CLI
 
 		private static void PrintChannelNotFoundError(string channel)
 		{
-			Program.WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", Program.GetTime());
+			Program.WriteTime();
 			Program.Write(ConsoleColor.White, "Not connected to ");
 			Program.WriteLine(ConsoleColor.DarkYellow, channel);
 		}
 
 		private static void PrintNotLoggedInError()
 		{
-			Program.WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", Program.GetTime());
+			Program.WriteTime();
 			Program.WriteLine(ConsoleColor.White, "Not logged in");
 		}
 	}

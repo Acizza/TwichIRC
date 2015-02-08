@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using Twirc.Lib.Util;
 
 namespace Twirc.Lib
@@ -44,7 +46,7 @@ namespace Twirc.Lib
 		public delegate void ConnectDel(string host, int port);
 		public delegate void LoginDel(LoginResponse response, string username);
 		public delegate void JoinDel(Channel channel, string username);
-		public delegate void MessageDel(Channel channel, string username, string message);
+		public delegate void MessageDel(Channel channel, User user, string message);
 		public delegate void UserSubscribedDel(Channel channel, string username);
 		public delegate void LeaveDel(Channel channel, string username);
 		public delegate void LogoutDel(string username);
@@ -140,6 +142,7 @@ namespace Twirc.Lib
 		private List<Channel> _channels;
 		private string _host;
 		private int _port;
+		private uint _joinsLeft;
 
 		public IRCClient()
 		{
@@ -264,11 +267,216 @@ namespace Twirc.Lib
 		}
 
 		/// <summary>
+		/// Reads and processes the next line from the server.
+		/// </summary>
+		public void ProcessNextLine()
+		{
+			if(!Alive)
+				return;
+
+			string data = ReadLine();
+
+			// If no data is received, the server closed the connection.
+			if(data.Length == 0)
+			{
+				Close();
+				return;
+			}
+
+			foreach(var line in data.Split('\n'))
+			{
+				if(line.Length == 0)
+					continue;
+
+				string code = line.Range(" ", " ");
+
+				if(code.Length > 0)
+					ProcessCode(code, line);
+
+				if(line.StartsWith(":jtv "))
+					ProcessSpecialLine(code, line);
+				else
+					ProcessLine(code, line);
+			}
+		}
+
+		private void ProcessCode(string code, string line)
+		{
+			switch(code)
+			{
+				case "353": // List of channel viewers.
+					// A colon would likely not be in the message if it's incomplete.
+					if(line.IndexOf(':') == -1)
+						return;
+
+					var channelName = line.Range("#", 0, " ", "\r");
+					var channel     = GetChannelByName(channelName);
+
+					if(channel == null)
+					{
+						channel = new Channel(channelName);
+						_channels.Add(channel);
+
+						OnJoin.Invoke(channel, Username);
+					}
+
+					ParseChannelViewers(channel, line);
+					break;
+
+				case "366": // End of join list.
+					if(_joinsLeft > 0)
+						--_joinsLeft;
+
+					if(_joinsLeft == 0)
+						CurrentBufferSize = MaxMessageBufferSize;
+
+					break;
+
+				case "004": // Successful login.
+				case "375":
+					if(LoggedIn)
+						break;
+
+					LoggedIn = true;
+					OnLogin.Invoke(new LoginResponse(true, code, "Login successful."), Username);
+					break;
+			}
+
+			// Check for failed login.
+			if(code[0] == '5' || code[0] == '4' || code == "NOTICE")
+				OnLogin.Invoke(new LoginResponse(false, code, line.From(" :")), Username);
+		}
+
+		/// <summary>
+		/// Processes a special line (ex: a line prefixed with :jtv) from the server.
+		/// </summary>
+		/// <param name="code">Message code.</param>
+		/// <param name="line">Line to process.</param>
+		private void ProcessSpecialLine(string code, string line)
+		{
+			if(code != "MODE")
+				return;
+
+			var match = Regex.Match(line, @":jtv MODE #(.+?) ([+-]\w+) (\w+)", RegexOptions.Compiled);
+
+			if(!match.Success)
+			{
+				Debug.WriteLine("Invalid :jtv match: " + line);
+				return;
+			}
+
+			var chanName  = match.Groups[1].Value;
+			var mode      = match.Groups[2].Value;
+			var username  = match.Groups[3].Value;
+
+			var channel = GetChannelByName(chanName);
+
+			if(channel == null)
+				return;
+
+			var user      = channel.GetUserByName(username);
+			bool isAdding = mode[0] == '+';
+			var group     = isAdding ? UserGroup.Moderator : UserGroup.User;
+
+			if(user == null && isAdding)
+				channel.AddUser(username, group);
+			else
+				user.Group = group;
+		}
+
+		/// <summary>
+		/// Processes a standard line (ex: a message sent by someone) from the server.
+		/// </summary>
+		/// <param name="code">Message code.</param>
+		/// <param name="line">Line to process.</param>
+		private void ProcessLine(string code, string line)
+		{
+			// Sending PONG after a PING request keeps the connection alive.
+			if(line.StartsWith("PING"))
+			{
+				SendLine(line.From("PONG ", false));
+				OnPing.Invoke();
+
+				return;
+			}
+
+			var channel = GetChannelByName(line.Range("#", 0, " ", "\r"));
+
+			if(channel == null)
+				return;
+
+			string username = line.Range(":", "!");
+
+			if(username.Length == 0)
+				return;
+
+			// Assume anything from twitchnotify is a subscription (for now).
+			if(username == "twitchnotify")
+			{
+				OnUserSubscribed.Invoke(channel, line.Range(":", " ", 1));
+				return;
+			}
+
+			switch(code)
+			{
+				case "PRIVMSG":
+					var user = channel.GetUserByName(username);
+
+					if(user == null)
+					{
+						user = new User(username);
+						channel.Users.Add(user);
+					}
+
+					OnMessage.Invoke(channel, user, line.From(":", true, 1));
+					break;
+
+				case "JOIN":
+					if(!channel.HasUser(username))
+						break;
+
+					channel.AddUser(username);
+
+					// Only send the join for users other than ourself, so we can send the proper join with a list of viewers later.
+					if(username != Username)
+						OnJoin.Invoke(channel, username);
+
+					break;
+
+				case "PART":
+					if(!channel.HasUser(username))
+						break;
+
+					channel.RemoveUserByName(username);
+					OnLeave.Invoke(channel, username);
+					break;
+			}
+		}
+
+		/// <summary>
+		/// Parses a message containing the list of viewers and adds them to the channel's user list.
+		/// </summary>
+		/// <param name="channel">Channel to add the users to.</param>
+		/// <param name="line">Line of data to parse.</param>
+		private static void ParseChannelViewers(Channel channel, string line)
+		{
+			foreach(var name in line.From(" :").Split(' '))
+			{
+				if(channel.HasUser(name))
+					continue;
+
+				channel.AddUser(name);
+			}
+		}
+
+		/// <summary>
 		/// Joins the specified channel.
 		/// </summary>
 		/// <param name="channel">Channel name.</param>
 		public void Join(string channel)
 		{
+			++_joinsLeft;
+
 			CurrentBufferSize = MaxJoinBufferSize;
 			SendLine("JOIN #" + channel);
 		}
@@ -340,166 +548,6 @@ namespace Twirc.Lib
 		private void SendLine(string data)
 		{
 			Socket.Send(Encoding.UTF8.GetBytes(data + "\n"));
-		}
-
-		/// <summary>
-		/// Reads and processes the next line from the server.
-		/// </summary>
-		public void ProcessNextLine()
-		{
-			if(!Alive)
-				return;
-
-			string data = ReadLine();
-
-			// If no data is received, the server closed the connection.
-			if(data.Length == 0)
-			{
-				Close();
-				return;
-			}
-
-			foreach(var line in data.Split('\n'))
-			{
-				if(line.Length == 0)
-					continue;
-
-				string code = line.Range(" ", " ");
-
-				if(code.Length > 0)
-					ProcessCode(code, line);
-
-				if(line.StartsWith(":jtv "))
-					ProcessSpecialLine(code, line);
-				else
-					ProcessLine(code, line);
-			}
-		}
-
-		private void ProcessCode(string code, string line)
-		{
-			switch(code)
-			{
-				// TODO: Write a class to handle joins. Incomplete names are sometimes sent as a second message.
-				case "353":
-					var channelName = line.Range("#", 0, " ", "\r");
-					var channel     = GetChannelByName(channelName);
-
-					if(channel == null)
-					{
-						channel = new Channel(channelName);
-						_channels.Add(channel);
-
-						OnJoin.Invoke(channel, Username);
-					}
-
-					ParseChannelViewers(channel, line);
-					break;
-
-				case "356": // End of join list, so restore the receive rate.
-					CurrentBufferSize = MaxMessageBufferSize;
-					break;
-
-				case "004":
-				case "375":
-					if(LoggedIn)
-						break;
-
-					LoggedIn = true;
-					OnLogin.Invoke(new LoginResponse(true, code, "Login successful."), Username);
-					break;
-			}
-
-			if(code[0] == '5' || code[0] == '4' || code == "NOTICE")
-				OnLogin.Invoke(new LoginResponse(false, code, line.From(" :")), Username);
-		}
-
-		/// <summary>
-		/// Processes a special line (ex: a line prefixed with :jtv) from the server.
-		/// </summary>
-		/// <param name="code">Message code.</param>
-		/// <param name="line">Line to process.</param>
-		private void ProcessSpecialLine(string code, string line)
-		{
-			// TODO: Implement
-		}
-
-		// TODO: Refactor
-		/// <summary>
-		/// Processes a standard line (ex: a message sent by someone) from the server.
-		/// </summary>
-		/// <param name="code">Message code.</param>
-		/// <param name="line">Line to process.</param>
-		private void ProcessLine(string code, string line)
-		{
-			// Sending PONG after a PING request keeps the connection alive.
-			if(line.StartsWith("PING"))
-			{
-				SendLine(line.From("PONG ", false));
-				OnPing.Invoke();
-
-				return;
-			}
-
-			var channel = GetChannelByName(line.Range("#", 0, " ", "\r"));
-
-			if(channel == null)
-				return;
-
-			string username = line.Range(":", "!");
-
-			if(username.Length == 0)
-				return;
-
-			// Assume anything from twitchnotify is a subscription (for now).
-			if(username == "twitchnotify")
-			{
-				OnUserSubscribed.Invoke(channel, line.Range(":", " ", 1));
-				return;
-			}
-
-			switch(code)
-			{
-				case "PRIVMSG":
-					OnMessage.Invoke(channel, username, line.From(":", true, 1));
-					break;
-
-				case "JOIN":
-					if(channel.Users.Contains(username))
-						break;
-
-					channel.Users.Add(username);
-
-					// Only send the join for users other than ourself, so we can send the proper join with a list of viewers later.
-					if(username != Username)
-						OnJoin.Invoke(channel, username);
-
-					break;
-
-				case "PART":
-					if(!channel.Users.Contains(username))
-						break;
-
-					channel.Users.Remove(username);
-					OnLeave.Invoke(channel, username);
-					break;
-			}
-		}
-
-		/// <summary>
-		/// Parses a message containing the list of viewers and adds them to the channel's user list.
-		/// </summary>
-		/// <param name="channel">Channel to add the users to.</param>
-		/// <param name="line">Line of data to parse.</param>
-		private static void ParseChannelViewers(Channel channel, string line)
-		{
-			foreach(var name in line.From(" :").Split(' '))
-			{
-				if(channel.Users.Contains(name))
-					continue;
-
-				channel.Users.Add(name);
-			}
 		}
 
 		/// <summary>

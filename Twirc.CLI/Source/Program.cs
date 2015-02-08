@@ -88,7 +88,7 @@ namespace Twirc.CLI
 			{
 				if(response.Success)
 				{
-					WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+					WriteTime();
 					Write(ConsoleColor.White, "Logged in as ");
 					WriteLine(ConsoleColor.Red, username);
 
@@ -97,7 +97,7 @@ namespace Twirc.CLI
 				}
 				else
 				{
-					WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+					WriteTime();
 					Write(ConsoleColor.White, "Failed to login [");
 					Write(ConsoleColor.Red, response.Code);
 					Write(ConsoleColor.White, "]: ");
@@ -107,7 +107,7 @@ namespace Twirc.CLI
 
 			client.OnLogout += username =>
 			{
-				WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+				WriteTime();
 				Write(ConsoleColor.White, "User ");
 				Write(ConsoleColor.DarkYellow, username);
 				WriteLine(ConsoleColor.White, " logged out");
@@ -115,7 +115,7 @@ namespace Twirc.CLI
 
 			client.OnJoin += (channel, username) =>
 			{
-				WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+				WriteTime();
 				Write(ConsoleColor.Red, username);
 				Write(ConsoleColor.White, " joined ");
 				WriteLine(ConsoleColor.DarkYellow, channel.Name);
@@ -123,7 +123,7 @@ namespace Twirc.CLI
 
 			client.OnLeave += (channel, username) =>
 			{
-				WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+				WriteTime();
 				Write(ConsoleColor.Red, username);
 				Write(ConsoleColor.White, " left ");
 				WriteLine(ConsoleColor.DarkYellow, channel.Name);
@@ -131,17 +131,18 @@ namespace Twirc.CLI
 
 			client.OnMessage += (channel, user, message) =>
 			{
-				WriteFmt(ConsoleColor.DarkYellow, "[{0}] <{1}> ",
+				WriteFmt(ConsoleColor.DarkYellow, "[{0}] <{1}> {2}",
 					GetTime(),
-					channel.Name);
+					channel.Name,
+					user.Group == UserGroup.Moderator ? "[M] " : "");
 
-				Write(ConsoleColor.Red, user);
+				Write(ConsoleColor.Red, user.Name);
 				WriteLine(ConsoleColor.White, ": " + message);
 			};
 
 			client.OnUserSubscribed += (channel, username) =>
 			{
-				WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+				WriteTime();
 				Write(ConsoleColor.White, "User ");
 				Write(ConsoleColor.Red, username);
 				Write(ConsoleColor.White, " subscribed to ");
@@ -175,6 +176,11 @@ namespace Twirc.CLI
 			Console.ForegroundColor = color;
 			Console.WriteLine(message);
 			Console.ResetColor();
+		}
+
+		public static void WriteTime()
+		{
+			WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
 		}
 
 		public static string GetTime()

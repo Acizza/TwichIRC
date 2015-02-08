@@ -33,6 +33,8 @@
     <Compile Include="Source\Util\Extensions.cs" />
     <Compile Include="Source\LoginResponse.cs" />
     <Compile Include="Source\Channel.cs" />
+    <Compile Include="Source\User.cs" />
+    <Compile Include="Source\UserGroup.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Source\" />
