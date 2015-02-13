@@ -8,30 +8,33 @@ namespace Twirc.CLI
 {
 	public static class Program
 	{
-		public static IRCClient Client { get; private set; }
+		public static IRCClient Client        { get; private set; }
+		public static SettingsParser Settings { get; private set; }
 
 		private static List<string> _joinChannels;
 
 		private static void Main(string[] args)
 		{
-			var options = new OptionParser();
+			Settings      = new SettingsParser();
+			_joinChannels = new List<string>();
 
-			string username = null;
-			string password = null;
-			_joinChannels   = new List<string>();
+			Settings.Add("username", "Username to use for login.");
+			Settings.Add("password", "The password / oauth key to use for login.");
+			Settings.Add("settings", v => Settings.SettingsFile = v, "Parses a settings file.");
+			Settings.Add("join", _joinChannels.Add, "Joins the specified channel on login.");
+			Settings.Add("autologin", "Enables / disables auto-login.");
+			Settings.Add("help", v =>
+			{
+				Settings.PrintHelp();
+				Environment.Exit(0);
+			}, "Prints information about all command-line parameters.");
 
-			options["u|user|username"] = new OptionDesc(
-				v => username = v,
-				"Username to use for login.");
+			Settings.OnOtherArgument += _joinChannels.Add;
 
-			options["p|pass|oauth|o|password"] = new OptionDesc(
-				v => password = v,
-				"The password / oauth key to use for login.");
+			Settings.Parse(args);
+			Settings.ParseSettingsFile();
 
-			options.OnOtherArgument += _joinChannels.Add;
-			options.Parse(args);
-
-			RunClient(username, password);
+			RunClient();
 		}
 
 		/// <summary>
@@ -49,14 +52,17 @@ namespace Twirc.CLI
 			processThread.Start();
 		}
 
-		private static void RunClient(string username, string password)
+		private static void RunClient()
 		{
 			// This address can also be used: 199.9.250.117:443
 			using(Client = new IRCClient("irc.twitch.tv", 6667))
 			{
 				InitializeClient(Client);
 
-				if(!String.IsNullOrEmpty(username) && !String.IsNullOrEmpty(password))
+				var username  = Settings["username"];
+				var password  = Settings["password"];
+
+				if(Settings.TryGet("autologin", true) && !String.IsNullOrEmpty(username) && !String.IsNullOrEmpty(password))
 				{
 					Client.Login(username, password);
 					StartProcessing();
@@ -68,10 +74,10 @@ namespace Twirc.CLI
 
 				while(true)
 				{
-					var result = CommandProcessor.Process(Console.ReadLine());
+					var errorMsg = CommandParser.Process(Console.ReadLine());
 
-					if(!result.Item2)
-						WriteLine(ConsoleColor.Red, result.Item1);
+					if(!String.IsNullOrEmpty(errorMsg))
+						WriteLine(ConsoleColor.Red, errorMsg);
 				}
 			}
 		}
@@ -82,7 +88,7 @@ namespace Twirc.CLI
 			{
 				if(response.Success)
 				{
-					WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+					WriteTime();
 					Write(ConsoleColor.White, "Logged in as ");
 					WriteLine(ConsoleColor.Red, username);
 
@@ -91,7 +97,7 @@ namespace Twirc.CLI
 				}
 				else
 				{
-					WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+					WriteTime();
 					Write(ConsoleColor.White, "Failed to login [");
 					Write(ConsoleColor.Red, response.Code);
 					Write(ConsoleColor.White, "]: ");
@@ -101,7 +107,7 @@ namespace Twirc.CLI
 
 			client.OnLogout += username =>
 			{
-				WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+				WriteTime();
 				Write(ConsoleColor.White, "User ");
 				Write(ConsoleColor.DarkYellow, username);
 				WriteLine(ConsoleColor.White, " logged out");
@@ -109,7 +115,7 @@ namespace Twirc.CLI
 
 			client.OnJoin += (channel, username) =>
 			{
-				WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+				WriteTime();
 				Write(ConsoleColor.Red, username);
 				Write(ConsoleColor.White, " joined ");
 				WriteLine(ConsoleColor.DarkYellow, channel.Name);
@@ -117,7 +123,7 @@ namespace Twirc.CLI
 
 			client.OnLeave += (channel, username) =>
 			{
-				WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+				WriteTime();
 				Write(ConsoleColor.Red, username);
 				Write(ConsoleColor.White, " left ");
 				WriteLine(ConsoleColor.DarkYellow, channel.Name);
@@ -125,17 +131,18 @@ namespace Twirc.CLI
 
 			client.OnMessage += (channel, user, message) =>
 			{
-				WriteFmt(ConsoleColor.DarkYellow, "[{0}] <{1}> ",
+				WriteFmt(ConsoleColor.DarkYellow, "[{0}] <{1}> {2}",
 					GetTime(),
-					channel.Name);
+					channel.Name,
+					user.Group == UserGroup.Moderator ? "[M] " : "");
 
-				Write(ConsoleColor.Red, user);
+				Write(ConsoleColor.Red, user.Name);
 				WriteLine(ConsoleColor.White, ": " + message);
 			};
 
 			client.OnUserSubscribed += (channel, username) =>
 			{
-				WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
+				WriteTime();
 				Write(ConsoleColor.White, "User ");
 				Write(ConsoleColor.Red, username);
 				Write(ConsoleColor.White, " subscribed to ");
@@ -169,6 +176,11 @@ namespace Twirc.CLI
 			Console.ForegroundColor = color;
 			Console.WriteLine(message);
 			Console.ResetColor();
+		}
+
+		public static void WriteTime()
+		{
+			WriteFmt(ConsoleColor.DarkYellow, "[{0}] ", GetTime());
 		}
 
 		public static string GetTime()
