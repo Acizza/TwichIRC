@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using Twirc.CLI.Util;
 
@@ -13,7 +14,7 @@ namespace Twirc.CLI
 
 			Program.WriteTime();
 			Program.Write(ConsoleColor.White, "Saved settings to ");
-			Program.WriteLine(ConsoleColor.DarkYellow, Program.Settings.SettingsFile);
+			Program.WriteLine(ConsoleColor.DarkYellow, Path.GetFileName(Program.Settings.SettingsFile));
 		}
 
 		[Command("login", 2, "<user> <pass>", "Login with the specified information.")]

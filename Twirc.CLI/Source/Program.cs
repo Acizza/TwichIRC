@@ -15,12 +15,12 @@ namespace Twirc.CLI
 
 		private static void Main(string[] args)
 		{
-			Settings = new SettingsParser();
+			Settings      = new SettingsParser();
 			_joinChannels = new List<string>();
 
 			Settings.Add("username", "Username to use for login.");
 			Settings.Add("password", "The password / oauth key to use for login.");
-			Settings.Add("settings", Settings.ParseFile, "Parses a settings file.");
+			Settings.Add("settings", v => Settings.SettingsFile = v, "Parses a settings file.");
 			Settings.Add("join", _joinChannels.Add, "Joins the specified channel on login.");
 			Settings.Add("autologin", "Enables / disables auto-login.");
 			Settings.Add("help", v =>
@@ -31,8 +31,8 @@ namespace Twirc.CLI
 
 			Settings.OnOtherArgument += _joinChannels.Add;
 
-			Settings.ParseSettingsFile();
 			Settings.Parse(args);
+			Settings.ParseSettingsFile();
 
 			RunClient();
 		}
