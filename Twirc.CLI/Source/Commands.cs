@@ -6,6 +6,16 @@ namespace Twirc.CLI
 {
 	public static class Commands
 	{
+		[Command("savesettings", 0, "", "Saves all specified command-line parameters.")]
+		public static void Save(string[] args)
+		{
+			Program.Settings.WriteAll();
+
+			Program.WriteTime();
+			Program.Write(ConsoleColor.White, "Saved settings to ");
+			Program.WriteLine(ConsoleColor.DarkYellow, Program.Settings.SettingsFile);
+		}
+
 		[Command("login", 2, "<user> <pass>", "Login with the specified information.")]
 		public static void Login(string[] args)
 		{
@@ -146,7 +156,7 @@ namespace Twirc.CLI
 		[Command("help", 1, "<command>", "Displays the information for the specified command.")]
 		public static void Help(string[] args)
 		{
-			if(!CommandProcessor.Commands.ContainsKey(args[0]))
+			if(!CommandParser.Commands.ContainsKey(args[0]))
 			{
 				Program.WriteTime();
 				Program.Write(ConsoleColor.White, "The specified command ");
@@ -156,7 +166,7 @@ namespace Twirc.CLI
 				return;
 			}
 
-			var command = CommandProcessor.Commands[args[0]];
+			var command = CommandParser.Commands[args[0]];
 
 			Program.Write(ConsoleColor.White, "Information for ");
 			Program.Write(ConsoleColor.DarkYellow, args[0]);
@@ -171,7 +181,7 @@ namespace Twirc.CLI
 		{
 			uint index = 1;
 
-			foreach(var command in CommandProcessor.Commands)
+			foreach(var command in CommandParser.Commands)
 			{
 				Program.Write(ConsoleColor.DarkYellow, index.ToString());
 				Program.WriteLine(ConsoleColor.White, ". " + command.Key);

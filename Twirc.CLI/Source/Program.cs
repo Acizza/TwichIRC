@@ -8,36 +8,33 @@ namespace Twirc.CLI
 {
 	public static class Program
 	{
-		public static IRCClient Client { get; private set; }
+		public static IRCClient Client        { get; private set; }
+		public static SettingsParser Settings { get; private set; }
 
 		private static List<string> _joinChannels;
 
 		private static void Main(string[] args)
 		{
-			var config = new ConfigParser();
+			Settings = new SettingsParser();
+			_joinChannels = new List<string>();
 
-			string username = null;
-			string password = null;
-			bool autoLogin  = true;
-			_joinChannels   = new List<string>();
-
-			config.Add("u|user|username", v => username = v, "Username to use for login.");
-			config.Add("p|pass|oauth|o|password", v => password = v, "The password / oauth key to use for login.");
-			config.Add("f|file|parse", config.ParseFile, "Parses a configuration file.");
-			config.Add("j|join", _joinChannels.Add, "Joins the specified channel on login.");
-			config.Add("a|al|autologin|auto-login", v => autoLogin = bool.Parse(v), "Enables / disables auto-login.");
-			config.Add("h|help", v =>
+			Settings.Add("username", "Username to use for login.");
+			Settings.Add("password", "The password / oauth key to use for login.");
+			Settings.Add("settings", Settings.ParseFile, "Parses a settings file.");
+			Settings.Add("join", _joinChannels.Add, "Joins the specified channel on login.");
+			Settings.Add("autologin", "Enables / disables auto-login.");
+			Settings.Add("help", v =>
 			{
-				config.PrintHelp();
+				Settings.PrintHelp();
 				Environment.Exit(0);
 			}, "Prints information about all command-line parameters.");
 
-			config.OnOtherArgument += _joinChannels.Add;
+			Settings.OnOtherArgument += _joinChannels.Add;
 
-			config.ParseSettingsFile();
-			config.Parse(args);
+			Settings.ParseSettingsFile();
+			Settings.Parse(args);
 
-			RunClient(username, password, autoLogin);
+			RunClient();
 		}
 
 		/// <summary>
@@ -55,14 +52,17 @@ namespace Twirc.CLI
 			processThread.Start();
 		}
 
-		private static void RunClient(string username, string password, bool autoLogin)
+		private static void RunClient()
 		{
 			// This address can also be used: 199.9.250.117:443
 			using(Client = new IRCClient("irc.twitch.tv", 6667))
 			{
 				InitializeClient(Client);
 
-				if(autoLogin && !String.IsNullOrEmpty(username) && !String.IsNullOrEmpty(password))
+				var username  = Settings["username"];
+				var password  = Settings["password"];
+
+				if(Settings.TryGet("autologin", true) && !String.IsNullOrEmpty(username) && !String.IsNullOrEmpty(password))
 				{
 					Client.Login(username, password);
 					StartProcessing();
@@ -74,10 +74,10 @@ namespace Twirc.CLI
 
 				while(true)
 				{
-					var result = CommandProcessor.Process(Console.ReadLine());
+					var errorMsg = CommandParser.Process(Console.ReadLine());
 
-					if(!result.Item2)
-						WriteLine(ConsoleColor.Red, result.Item1);
+					if(!String.IsNullOrEmpty(errorMsg))
+						WriteLine(ConsoleColor.Red, errorMsg);
 				}
 			}
 		}

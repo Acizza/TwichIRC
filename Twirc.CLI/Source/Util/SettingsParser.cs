@@ -1,20 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace Twirc.CLI.Util
 {
-	public sealed class ConfigParser
+	public sealed class SettingsParser
 	{
-		public const string SettingsFile = "settings.cfg";
-
-		/// <summary>
-		/// The char used to separate parameter names that do the same thing.
-		/// </summary>
-		public char NameSeparator = '|';
+		public string SettingsFile = "settings.cfg";
 
 		/// <summary>
 		/// The char used to identify parameters from other arguments.
@@ -25,27 +19,22 @@ namespace Twirc.CLI.Util
 		/// The list of options currently being used for parsing.
 		/// </summary>
 		/// <value>The options.</value>
-		public ReadOnlyDictionary<string, ConfigDescription> Options
-		{
-			get { return new ReadOnlyDictionary<string, ConfigDescription>(_settings); }
-		}
+		public Dictionary<string, SettingInformation> Settings;
 
 		/// <summary>
 		/// Called when an argument that isn't an option is encountered while parsing.
 		/// </summary>
 		public event Action<string> OnOtherArgument;
 
-		public ConfigDescription this[string name]
+		public string this[string name]
 		{
-			get { return _settings[name]; }
+			get { return Settings.ContainsKey(name) ? Settings[name].Value : null; }
 			set { Add(name, value); }
 		}
 
-		private Dictionary<string, ConfigDescription> _settings;
-
-		public ConfigParser()
+		public SettingsParser()
 		{
-			_settings = new Dictionary<string, ConfigDescription>();
+			Settings = new Dictionary<string, SettingInformation>();
 		}
 
 		/// <summary>
@@ -56,7 +45,17 @@ namespace Twirc.CLI.Util
 		/// <param name="description">Description.</param>
 		public void Add(string name, Action<string> callback, string description)
 		{
-			Add(name, new ConfigDescription(callback, description));
+			Add(name, new SettingInformation(callback, description));
+		}
+
+		/// <summary>
+		/// Adds a new setting to the parser.
+		/// </summary>
+		/// <param name="name">Setting name.</param>
+		/// <param name="description">Setting description.</param>
+		public void Add(string name, string description)
+		{
+			Add(name, new SettingInformation(null, description));
 		}
 
 		/// <summary>
@@ -64,12 +63,27 @@ namespace Twirc.CLI.Util
 		/// </summary>
 		/// <param name="name">Setting name.</param>
 		/// <param name="desc">Setting information.</param>
-		public void Add(string name, ConfigDescription desc)
+		public void Add(string name, SettingInformation desc)
 		{
-			desc.FullName = name;
+			Settings[name] = desc;
+		}
 
-			foreach(var uniqueName in name.Split(NameSeparator))
-				_settings[uniqueName] = desc;
+		/// <summary>
+		/// Tries to retrieve a value from the list of settings. If the specified setting isn't found, it returns defaultValue.
+		/// </summary>
+		/// <returns>The retrieved value, or defaultValue.</returns>
+		/// <param name="name">Setting name.</param>
+		/// <param name="defaultValue">Return value to use if the setting isn't found.</param>
+		/// <typeparam name="T">The type to return the result as.</typeparam>
+		public T TryGet<T>(string name, T defaultValue = default(T)) where T : IConvertible
+		{
+			if(!Settings.ContainsKey(name))
+				return defaultValue;
+
+			if(String.IsNullOrEmpty(Settings[name].Value))
+				return defaultValue;
+
+			return (T)Convert.ChangeType(Settings[name].Value, typeof(T));
 		}
 
 		/// <summary>
@@ -100,7 +114,7 @@ namespace Twirc.CLI.Util
 
 				var name = match.Groups[1].Value;
 
-				if(!_settings.ContainsKey(name))
+				if(!Settings.ContainsKey(name))
 				{
 					Console.ForegroundColor = ConsoleColor.Yellow;
 					Console.WriteLine("WARNING: Unknown command: " + name);
@@ -109,7 +123,13 @@ namespace Twirc.CLI.Util
 					continue;
 				}
 
-				_settings[name].Callback.Invoke(match.Groups[2].Value);
+				var value = match.Groups[2].Value;
+				var setting = Settings[name];
+
+				setting.Value = value;
+
+				if(setting.Callback != null)
+					setting.Callback.Invoke(value);
 			}
 		}
 
@@ -134,19 +154,40 @@ namespace Twirc.CLI.Util
 		}
 
 		/// <summary>
+		/// Writes all non-empty settings to a file.
+		/// </summary>
+		/// <param name="path">Settings file path.</param>
+		public void WriteAll(string path)
+		{
+			var setSettings = Settings.Where(x => !String.IsNullOrEmpty(x.Value.Value));
+
+			if(!setSettings.Any())
+				return;
+
+			File.WriteAllLines(path, setSettings
+				.Select(x => String.Format("{0} = {1}", x.Key, x.Value.Value)));
+		}
+
+		/// <summary>
+		/// Writes all non-empty settings to a file.
+		/// </summary>
+		public void WriteAll()
+		{
+			WriteAll(SettingsFile);
+		}
+
+		/// <summary>
 		/// Prints detailed information about every command.
 		/// </summary>
 		public void PrintHelp()
 		{
 			Console.WriteLine("Specify setting values by placing a space or equal sign after typing the command.");
-			Console.WriteLine("Commands separated by \"{0}\" do the same thing.\n", NameSeparator);
 
-			// The LINQ statement only selects distinct command names.
-			foreach(var option in _settings.GroupBy(x => x.Value.FullName).Select(x => x.First()))
+			foreach(var option in Settings)
 			{
 				Console.WriteLine("{0}{1}:\n\tDescription: {2}\n",
 					ArgSpecifier,
-					option.Value.FullName,
+					option.Key,
 					option.Value.Description);
 			}
 		}
