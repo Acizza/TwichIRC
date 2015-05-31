@@ -6,10 +6,10 @@ open System.Net.Sockets
 let cprintf color fmt =
     Printf.kprintf
         (fun s ->
-            let old = Console.ForegroundColor
+            //let old = Console.ForegroundColor
             Console.ForegroundColor <- color
             Console.Write s
-            Console.ForegroundColor <- old
+            //Console.ForegroundColor <- old
         )
         fmt
 
@@ -19,17 +19,11 @@ let time() =
 let printTime() =
     cprintf ConsoleColor.Green "%s" (time())
 
-let printMessage sender content =
+let printStatusMessage channel user status =
     printTime()
-    cprintf ConsoleColor.Yellow " %s" sender
-    cprintf ConsoleColor.White ": %s" content
-    printfn ""
-
-let printStatusMessage source status event =
-    printTime()
-    cprintf ConsoleColor.Yellow " %s" source
-    cprintf ConsoleColor.White " %s " status
-    cprintf ConsoleColor.Yellow "%s" event
+    cprintf ConsoleColor.Cyan " <%s> " channel
+    cprintf ConsoleColor.Yellow "%s " user
+    cprintf ConsoleColor.White "%s " status
     printfn ""
 
 type PipeStatus<'a> =
@@ -52,11 +46,20 @@ let processCritical (line:string) =
         Continue (code,line)
 
 let processMessage (code,line:string) =
+    let getIndexOrEnd (str:string) (list:string[]) =
+        let res = list
+                |> Array.map (fun s -> str.IndexOf s)
+                |> Array.filter (fun x -> x <> -1)
+
+        if res.Length > 0 then res.[0] else str.Length
+
     let getMessage() =
         line.Substring(line.IndexOf " :"+2)
 
     let getChannel() =
-        line.Substring (line.IndexOf "#"+1)
+        let start = line.Substring (line.IndexOf "#"+1)
+        let eIdx = [|" "; "\r"|] |> getIndexOrEnd start
+        start.Substring(0, eIdx)
 
     let username =
         let eIdx = line.IndexOf '!'
@@ -74,17 +77,17 @@ let processMessage (code,line:string) =
                 let msg = getMessage()
                 msg.Substring(0, msg.IndexOf " ")
 
-            let channel =
-                let msg = getChannel()
-                msg.Substring(0, msg.IndexOf " ")
-
-            printStatusMessage user "subscribed to" channel
+            printStatusMessage (getChannel()) user (getMessage().Substring(user.Length+1))
         else
-            printMessage username (getMessage())
+            printTime()
+            cprintf ConsoleColor.Cyan " <%s> " (getChannel())
+            cprintf ConsoleColor.Yellow "%s" username
+            cprintf ConsoleColor.White ": %s" (getMessage())
+            printfn ""
     | "JOIN" ->
-        printStatusMessage username "joined" (getChannel())
+        printStatusMessage (getChannel()) username "joined"
     | "PART" ->
-        printStatusMessage username "left" (getChannel())
+        printStatusMessage (getChannel()) username "left"
     | _ ->
         ()
 
