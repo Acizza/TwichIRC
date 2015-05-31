@@ -103,7 +103,7 @@ let processLine line =
     |> processCritical
     |> ifContinueThen processMessage
 
-let rec processMessages (reader:StreamReader) (writer:StreamWriter) =
+let rec processMessages (reader:StreamReader) (writer:StreamWriter) = async {
     let line = reader.ReadLine()
 
     match reader.EndOfStream with
@@ -115,9 +115,10 @@ let rec processMessages (reader:StreamReader) (writer:StreamWriter) =
             else
                 processLine line |> ignore
 
-        processMessages reader writer
+        return! processMessages reader writer
     | true ->
         ()
+}
 
 let login nick pass (writer:StreamWriter) =
     writer.WriteLine()
@@ -130,18 +131,42 @@ let join channel (writer:StreamWriter) =
     writer.WriteLine(sprintf "JOIN #%s" channel)
     writer.Flush()
 
+let leave channel (writer:StreamWriter) =
+    writer.WriteLine(sprintf "PART #%s" channel)
+    writer.Flush()
+
+let sendMessage channel msg (writer:StreamWriter) =
+    writer.WriteLine(sprintf "PRIVMSG #%s :%s" channel msg)
+    writer.Flush()
+
+let rec processInput (input:string) (writer:StreamWriter) =
+    let args = input.Split ' ' |> Array.toList
+
+    match args with
+    | "join"::channels ->
+        channels |> List.iter (fun s -> join s writer)
+    | "leave"::channels ->
+        channels |> List.iter (fun s -> leave s writer)
+    | "send"::channel::msg ->
+        let fullMsg = msg |> String.concat " "
+        writer |> sendMessage channel fullMsg
+    | _ ->
+        printfn "Unknown command: %s" input
+        ()
+
+    processInput (Console.ReadLine()) writer
+
 [<EntryPoint>]
 let main args = 
     use client = new TcpClient("irc.twitch.tv", 6667)
     use reader = new StreamReader(client.GetStream(), Encoding.UTF8)
     use writer = new StreamWriter(client.GetStream(), Encoding.UTF8)
 
-    writer.NewLine <- "\r\n"
+    Async.Start (processMessages reader writer)
 
+    writer.NewLine <- "\r\n"
     // Replace the empty strings with your user credentials (username, oauth)
     writer |> login "" ""
-    // Replace the empty string with the channel you want to join
-    writer |> join ""
+    writer |> processInput (Console.ReadLine())
 
-    processMessages reader writer
     0
