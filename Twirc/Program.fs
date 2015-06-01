@@ -163,15 +163,19 @@ let rec processInput (input:string) (writer:StreamWriter) =
 
 [<EntryPoint>]
 let main args =
-    use client = new TcpClient("irc.twitch.tv", 6667)
-    use reader = new StreamReader(client.GetStream(), Encoding.UTF8)
-    use writer = new StreamWriter(client.GetStream(), Encoding.UTF8)
+    match args |> Array.toList with
+    | username::password::_ ->
+        use client = new TcpClient("irc.twitch.tv", 6667)
+        use reader = new StreamReader(client.GetStream(), Encoding.UTF8)
+        use writer = new StreamWriter(client.GetStream(), Encoding.UTF8)
 
-    Async.Start (processMessages reader writer)
+        Async.Start (processMessages reader writer)
 
-    writer.NewLine <- "\r\n"
-    // Replace the empty strings with your user credentials (username, oauth)
-    writer |> login "" ""
-    writer |> processInput (Console.ReadLine())
+        writer.NewLine <- "\r\n"
+        // Replace the empty strings with your user credentials (username, oauth)
+        writer |> login username password
+        writer |> processInput (Console.ReadLine())
+    | _ ->
+        printfn "Usage: <username> <oauth>"
 
     0
