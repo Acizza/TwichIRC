@@ -6,24 +6,29 @@ open System.Net.Sockets
 let cprintf color fmt =
     Printf.kprintf
         (fun s ->
-            //let old = Console.ForegroundColor
+            let old = Console.ForegroundColor
             Console.ForegroundColor <- color
             Console.Write s
-            //Console.ForegroundColor <- old
+            Console.ForegroundColor <- old
         )
         fmt
 
-let time() =
+let curTime() =
     DateTime.Now.ToString("[hh:mm:ss tt]")
 
 let printTime() =
-    cprintf ConsoleColor.Green "%s" (time())
+    cprintf ConsoleColor.Green "%s" (curTime())
+
+let println fmt =
+    printTime()
+    printf " "
+    printfn fmt
 
 let printStatusMessage channel user status =
     printTime()
     cprintf ConsoleColor.Cyan " <%s> " channel
-    cprintf ConsoleColor.Yellow "%s " user
-    cprintf ConsoleColor.White "%s " status
+    cprintf ConsoleColor.White "%s " user
+    cprintf ConsoleColor.Magenta "%s " status
     printfn ""
 
 type PipeStatus<'a> =
@@ -37,21 +42,21 @@ let processCritical (line:string) =
 
     match code with
     | "004" ->
-        printfn "Logged in"
+        println "Logged in"
         Halt
     | "NOTICE" ->
-        printfn "Failed to login"
+        println "Failed to login"
         Halt
     | _ ->
         Continue (code,line)
 
 let processMessage (code,line:string) =
+    /// Returns the index of the first found character in the list, or the end of the string otherwise.
     let getIndexOrEnd (str:string) (list:string[]) =
-        let res = list
-                |> Array.map (fun s -> str.IndexOf s)
-                |> Array.filter (fun x -> x <> -1)
-
-        if res.Length > 0 then res.[0] else str.Length
+        list
+        |> Array.map (fun s -> str.IndexOf s)
+        |> Array.filter (fun x -> x <> -1)
+        |> (fun x -> if x.Length > 0 then x.[0] else str.Length)
 
     let getMessage() =
         line.Substring(line.IndexOf " :"+2)
@@ -151,13 +156,13 @@ let rec processInput (input:string) (writer:StreamWriter) =
         let fullMsg = msg |> String.concat " "
         writer |> sendMessage channel fullMsg
     | _ ->
-        printfn "Unknown command: %s" input
+        println "Unknown command: %s" input
         ()
 
     processInput (Console.ReadLine()) writer
 
 [<EntryPoint>]
-let main args = 
+let main args =
     use client = new TcpClient("irc.twitch.tv", 6667)
     use reader = new StreamReader(client.GetStream(), Encoding.UTF8)
     use writer = new StreamWriter(client.GetStream(), Encoding.UTF8)
