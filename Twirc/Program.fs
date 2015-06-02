@@ -111,8 +111,7 @@ let processLine line =
 let rec processMessages (reader:StreamReader) (writer:StreamWriter) = async {
     let line = reader.ReadLine()
 
-    match reader.EndOfStream with
-    | false ->
+    if line <> null then
         if line.Length > 0 then
             if line.StartsWith "PING " then
                 writer.WriteLine ("PONG " + line.Substring("PING ".Length))
@@ -121,7 +120,7 @@ let rec processMessages (reader:StreamReader) (writer:StreamWriter) = async {
                 processLine line |> ignore
 
         return! processMessages reader writer
-    | true ->
+    else
         ()
 }
 
@@ -172,7 +171,6 @@ let main args =
         Async.Start (processMessages reader writer)
 
         writer.NewLine <- "\r\n"
-        // Replace the empty strings with your user credentials (username, oauth)
         writer |> login username password
         writer |> processInput (Console.ReadLine())
     | _ ->
