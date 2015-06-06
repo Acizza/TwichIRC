@@ -90,12 +90,11 @@ let processNormal (code,line:string,state) =
 
     match code with
     | "PRIVMSG" ->
-        if username = "twitchnotify" then
-            let user =
-                let msg = getMessage()
-                msg.Substring(0, msg.IndexOf " ")
+        let message = getMessage()
 
-            printStatusMessage (getChannel()) user (getMessage().Substring(user.Length+1))
+        if username = "twitchnotify" then
+            let user = message.Substring(0, message.IndexOf " ")
+            printStatusMessage (getChannel()) user (message.Substring(user.Length+1))
         else
             printTime()
             cprintf ConsoleColor.Cyan " <%s> " (getChannel())
@@ -104,7 +103,7 @@ let processNormal (code,line:string,state) =
                 cprintf ConsoleColor.Gray "[M] "
 
             cprintf ConsoleColor.Yellow "%s" username
-            cprintf ConsoleColor.White ": %s" (getMessage())
+            cprintf ConsoleColor.White ": %s" message
             printfn ""
     | "JOIN" ->
         printStatusMessage (getChannel()) username "joined"
