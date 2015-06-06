@@ -31,15 +31,18 @@ let printStatusMessage channel user status =
     cprintf ConsoleColor.Magenta "%s " status
     printfn ""
 
-type PipeStatus<'a> =
+type PipeStatus<'a,'b> =
     | Continue of 'a
+    | Result of 'b
     | Halt
 
-let processCritical (line:string) =
-    let code =
-        let split = line.Split ' '
-        if split.Length > 0 then split.[1] else ""
+type State = {
+    stream: StreamWriter;
+    mods: string list;
+}
 
+/// Processes messages that indicate if a login was successful or not, along with channel moderators.
+let processImportant (code,line:string,state) =
     match code with
     | "004" ->
         println "Logged in"
@@ -47,10 +50,20 @@ let processCritical (line:string) =
     | "NOTICE" ->
         println "Failed to login"
         Halt
-    | _ ->
-        Continue (code,line)
+    | "MODE" ->
+        let split = (line.Split ' ')
+        let mode = split.[3].[0]
 
-let processMessage (code,line:string) =
+        if mode = '+' then
+            Result {state with mods = split.[4]::state.mods}
+        else
+            let newMods = state.mods |> List.filter (fun s -> s <> split.[4])
+            Result {state with mods = newMods}
+    | _ ->
+        Continue (code,line,state)
+
+/// Processes messages that are printed. Ex: PRIVMSG, JOIN, PART.
+let processNormal (code,line:string,state) =
     /// Returns the index of the first found character in the list, or the end of the string otherwise.
     let getIndexOrEnd (str:string) (list:string[]) =
         list
@@ -86,6 +99,10 @@ let processMessage (code,line:string) =
         else
             printTime()
             cprintf ConsoleColor.Cyan " <%s> " (getChannel())
+
+            if state.mods |> List.exists (fun s -> s = username) then
+                cprintf ConsoleColor.Gray "[M] "
+
             cprintf ConsoleColor.Yellow "%s" username
             cprintf ConsoleColor.White ": %s" (getMessage())
             printfn ""
@@ -96,30 +113,41 @@ let processMessage (code,line:string) =
     | _ ->
         ()
 
-    Halt
+    Result state
 
-let processLine line =
-    let ifContinueThen func status =
-        match status with
-        | Continue s -> func s
-        | Halt -> Halt
+let processMessage (line:string) state =
+    if line.StartsWith "PING " then
+        let writer = state.stream
+        writer.WriteLine ("PONG " + line.Substring("PING ".Length))
+        writer.Flush()
+        state
+    else
+        let ifContinueThen func status =
+            match status with
+            | Continue s -> func s
+            | Result x -> Result x
+            | Halt -> Halt
 
-    line
-    |> processCritical
-    |> ifContinueThen processMessage
+        let getResultOr def status =
+            match status with
+            | Result x | Continue x -> x
+            | Halt -> def
 
-let rec processMessages (reader:StreamReader) (writer:StreamWriter) = async {
+        let code =
+            let split = line.Split ' '
+            if split.Length > 0 then split.[1] else ""
+
+        (code,line,state)
+        |> processImportant
+        |> ifContinueThen processNormal
+        |> getResultOr state
+
+let rec processMessages (reader:StreamReader) state = async {
     let line = reader.ReadLine()
 
     if line <> null then
-        if line.Length > 0 then
-            if line.StartsWith "PING " then
-                writer.WriteLine ("PONG " + line.Substring("PING ".Length))
-                writer.Flush()
-            else
-                processLine line |> ignore
-
-        return! processMessages reader writer
+        let newState = processMessage line state
+        return! processMessages reader newState
     else
         ()
 }
@@ -169,7 +197,7 @@ let main args =
         use writer = new StreamWriter(client.GetStream(), Encoding.UTF8)
 
         writer.NewLine <- "\r\n"
-        Async.Start (processMessages reader writer)
+        Async.Start (processMessages reader {stream = writer; mods = []})
 
         writer |> login username password
 
