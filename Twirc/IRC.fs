@@ -106,7 +106,7 @@ let processNormal (code,line:string,state) =
             printStatusMessage channel user (message.Substring(user.Length+1))
         else
             printTime()
-            cprintf ConsoleColor.Cyan " <%s> " (getChannel())
+            cprintf ConsoleColor.Cyan " <%s> " channel
 
             if state.mods |> List.exists (fun (chan,uname) -> uname = username && chan = channel) then
                 cprintf ConsoleColor.Gray "[M] "
