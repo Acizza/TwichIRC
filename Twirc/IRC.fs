@@ -36,9 +36,12 @@ type PipeStatus<'a,'b> =
     | Result of 'b
     | Halt
 
+type Channel = string
+type Username = string
+
 type State = {
     stream: StreamWriter;
-    mods: string list;
+    mods: (Channel * Username) list;
 }
 
 /// Processes messages that indicate if a login was successful or not, along with channel moderators.
@@ -52,12 +55,17 @@ let processImportant (code,line:string,state) =
         Halt
     | "MODE" ->
         let split = (line.Split ' ')
+        let channel = split.[2]
         let mode = split.[3].[0]
+        let username = split.[4]
 
         if mode = '+' then
-            Result {state with mods = split.[4]::state.mods}
+            Result {state with mods = (channel.[1..],username)::state.mods}
         else
-            let newMods = state.mods |> List.filter (fun s -> s <> split.[4])
+            let newMods =
+                state.mods
+                |> List.filter (fun (chan,uname) -> uname <> username && chan <> channel)
+
             Result {state with mods = newMods}
     | _ ->
         Continue (code,line,state)
@@ -91,15 +99,16 @@ let processNormal (code,line:string,state) =
     match code with
     | "PRIVMSG" ->
         let message = getMessage()
+        let channel = getChannel()
 
         if username = "twitchnotify" then
             let user = message.Substring(0, message.IndexOf " ")
-            printStatusMessage (getChannel()) user (message.Substring(user.Length+1))
+            printStatusMessage channel user (message.Substring(user.Length+1))
         else
             printTime()
             cprintf ConsoleColor.Cyan " <%s> " (getChannel())
 
-            if state.mods |> List.exists (fun s -> s = username) then
+            if state.mods |> List.exists (fun (chan,uname) -> uname = username && chan = channel) then
                 cprintf ConsoleColor.Gray "[M] "
 
             cprintf ConsoleColor.Yellow "%s" username
