@@ -32,7 +32,14 @@ let main args =
         use writer = new StreamWriter(client.GetStream(), Encoding.UTF8)
 
         writer.NewLine <- "\r\n"
-        Async.Start (processMessages reader {stream = writer; mods = []})
+
+        let state = {
+            stream = writer;
+            username = username;
+            mods = [];
+        }
+
+        Async.Start (processMessages reader state)
 
         writer |> login username password
 

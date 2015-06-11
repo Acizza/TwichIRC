@@ -41,6 +41,7 @@ type Username = string
 
 type State = {
     stream: StreamWriter;
+    username: Username;
     mods: (Channel * Username) list;
 }
 
@@ -114,14 +115,23 @@ let processNormal (code,line:string,state) =
             cprintf ConsoleColor.Yellow "%s" username
             cprintf ConsoleColor.White ": %s" message
             printfn ""
+           
+        Result state
     | "JOIN" ->
         printStatusMessage (getChannel()) username "joined"
+        Result state
     | "PART" ->
-        printStatusMessage (getChannel()) username "left"
-    | _ ->
-        ()
+        let channel = getChannel()
+        printStatusMessage channel username "left"
 
-    Result state
+        // Remove mods from channel mod list if the logged in user left the channel.
+        if username = state.username then
+            let newMods = state.mods |> List.filter (fun (chan,_) -> chan <> channel)
+            Result {state with mods = newMods}
+        else
+            Result state
+    | _ ->
+        Result state
 
 let processMessage (line:string) state =
     if line.StartsWith "PING " then
