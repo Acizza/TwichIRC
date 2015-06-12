@@ -103,14 +103,19 @@ let processNormal (code,line:string,state) =
         let message = getMessage()
         let channel = getChannel()
 
+        // Messages sent by twitchnotify are subscriber notifications
         if username = "twitchnotify" then
             let user = message.Substring(0, message.IndexOf " ")
             printStatusMessage channel user (message.Substring(user.Length+1))
+        elif message.StartsWith "\001ACTION " then // /me command.
+            printStatusMessage channel username (message.Substring ("ACTION ".Length+1))
         else
             printTime()
             cprintf ConsoleColor.Cyan " <%s> " channel
 
-            if state.mods |> List.exists (fun (chan,uname) -> uname = username && chan = channel) then
+            if username = channel then
+                cprintf ConsoleColor.Gray "[B] "
+            elif state.mods |> List.exists (fun (chan,uname) -> uname = username && chan = channel) then
                 cprintf ConsoleColor.Gray "[M] "
 
             cprintf ConsoleColor.Yellow "%s" username
