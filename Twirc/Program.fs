@@ -6,22 +6,34 @@ open System.Text
 open System.Net.Sockets
 open Twirc.IRC
 
-let rec processInput (input:string) (writer:StreamWriter) =
+let processInput (input:string) state =
     let args = input.Split ' ' |> Array.toList
+    let writer = state.writer
 
     match args with
     | "join"::channels ->
         channels |> List.iter (fun s -> join s writer)
+        state
     | "leave"::channels ->
         channels |> List.iter (fun s -> leave s writer)
+        state
     | "send"::channel::msg ->
         let fullMsg = msg |> String.concat " "
         writer |> sendMessage channel fullMsg
+        state
     | _ ->
         println "Unknown command: %s" input
-        ()
+        state
 
-    processInput (Console.ReadLine()) writer
+type Message = IRC of string | Console of string
+
+let rec readMessages (agent:MailboxProcessor<Message>) (reader:StreamReader) = async {
+    let line = reader.ReadLine()
+
+    if line <> null then
+        agent.Post (IRC line)
+        return! readMessages agent reader
+}
 
 [<EntryPoint>]
 let main args =
@@ -34,19 +46,41 @@ let main args =
         writer.NewLine <- "\r\n"
 
         let state = {
-            stream = writer;
+            reader = reader;
+            writer = writer;
             username = username;
             mods = [];
         }
 
-        Async.Start (processMessages reader state)
+        let agent = MailboxProcessor.Start (fun inbox ->
+            let rec loop state = async {
+                let! msg = inbox.Receive()
+
+                let next =
+                    match msg with
+                    | IRC line ->
+                        processMessage line state
+                    | Console input ->
+                        processInput input state
+
+                return! loop next
+            }
+
+            loop state
+        )
+
+        Async.Start (readMessages agent reader)
 
         writer |> login username password
 
         channels
         |> List.iter (fun c -> join c writer)
 
-        writer |> processInput (Console.ReadLine())
+        let rec processConsole() =
+            agent.Post (Console (Console.ReadLine()))
+            processConsole()
+
+        processConsole()
     | _ ->
         printfn "Usage: <username> <oauth>"
 

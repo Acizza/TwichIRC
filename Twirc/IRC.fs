@@ -40,7 +40,8 @@ type Channel = string
 type Username = string
 
 type State = {
-    stream: StreamWriter;
+    reader: StreamReader;
+    writer: StreamWriter;
     username: Username;
     mods: (Channel * Username) list;
 }
@@ -135,7 +136,7 @@ let processNormal (code,line:string,state) =
 
 let processMessage (line:string) state =
     if line.StartsWith "PING " then
-        let writer = state.stream
+        let writer = state.writer
         writer.WriteLine ("PONG " + line.Substring("PING ".Length))
         writer.Flush()
         state
@@ -159,16 +160,6 @@ let processMessage (line:string) state =
         |> processImportant
         |> ifContinueThen processNormal
         |> getResultOr state
-
-let rec processMessages (reader:StreamReader) state = async {
-    let line = reader.ReadLine()
-
-    if line <> null then
-        let newState = processMessage line state
-        return! processMessages reader newState
-    else
-        ()
-}
 
 let login nick pass (writer:StreamWriter) =
     writer.WriteLine()
