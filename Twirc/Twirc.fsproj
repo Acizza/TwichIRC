@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
-    <ProjectGuid>{1BBC1665-3403-4287-8EDA-E9470D2CD316}</ProjectGuid>
+    <ProjectGuid>{9eabf159-9bdd-4b00-ab5c-0f6fb2ffeac8}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <RootNamespace>Twirc</RootNamespace>
     <AssemblyName>Twirc</AssemblyName>
@@ -19,6 +19,9 @@
     <OutputPath>bin\Release</OutputPath>
     <ErrorReport>prompt</ErrorReport>
     <Externalconsole>true</Externalconsole>
+    <Optimize>true</Optimize>
+    <Prefer32Bit>false</Prefer32Bit>
+    <Tailcalls>true</Tailcalls>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
@@ -32,5 +35,5 @@
     <Compile Include="IRC.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
-  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.1\Framework\v4.0\Microsoft.FSharp.Targets" />
+  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\4.0\Framework\v4.0\Microsoft.FSharp.Targets" />
 </Project>
