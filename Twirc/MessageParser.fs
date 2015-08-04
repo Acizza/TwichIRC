@@ -6,10 +6,12 @@ type Message = string
 type ReplyContent = string
 
 type MessageType =
-    | PrivateMessage of Channel * User * Message
+    | ChatMessage of Channel * User * Message
     | Join of Channel * User
     | Leave of Channel * User
     | Ping of ReplyContent
+    | LoginSuccess of User
+    | LoginFailed of Message
 
 let getCode (str:string) =
     if str.StartsWith "PING" then
@@ -33,7 +35,7 @@ let toType str =
         let user = str |> getUser
         let msg = str.[str.IndexOf " :"+2..]
 
-        Some (PrivateMessage (channel, user, msg))
+        Some (ChatMessage (channel, user, msg))
     | Some "JOIN" ->
         let channel = str |> getChannel
         let user = str |> getUser
@@ -46,5 +48,9 @@ let toType str =
         Some (Leave (channel, user))
     | Some "PING" ->
         Some (Ping str.["PING ".Length..])
+    | Some "004" ->
+        Some (LoginSuccess (str.Split ' ').[2])
+    | Some "NOTICE" ->
+        Some (LoginFailed str.[str.IndexOf " :"+2..])
     | _ ->
         None
