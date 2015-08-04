@@ -1,87 +1,32 @@
-﻿module Twirc.Program
-
-open System
-open System.IO
-open System.Text
-open System.Net.Sockets
-open Twirc.IRC
-
-let processInput (input:string) state =
-    let args = input.Split ' ' |> Array.toList
-    let writer = state.writer
-
-    match args with
-    | "join"::channels ->
-        channels |> List.iter (fun s -> join s writer)
-        state
-    | "leave"::channels ->
-        channels |> List.iter (fun s -> leave s writer)
-        state
-    | "send"::channel::msg ->
-        let fullMsg = msg |> String.concat " "
-        writer |> sendMessage channel fullMsg
-        state
-    | _ ->
-        println "Unknown command: %s" input
-        state
-
-type Message = IRC of string | Console of string
-
-let rec readMessages (agent:MailboxProcessor<Message>) (reader:StreamReader) = async {
-    let line = reader.ReadLine()
-
-    if line <> null then
-        agent.Post (IRC line)
-        return! readMessages agent reader
-}
+﻿module Program
 
 [<EntryPoint>]
 let main args =
     match args |> Array.toList with
-    | username::password::channels ->
-        use client = new TcpClient("irc.twitch.tv", 6667)
-        use reader = new StreamReader(client.GetStream(), Encoding.UTF8)
-        use writer = new StreamWriter(client.GetStream(), Encoding.UTF8)
+    | username::oauth::channels ->
+        let get r =
+            match r with
+            | Result.Success x -> x
+            | Result.Failure x -> failwith x
 
-        writer.NewLine <- "\r\n"
+        let link = get (DataLink.create "irc.twitch.tv" 6667)
+        let user = link |> User.createAndLogin username oauth
 
-        let state = {
-            reader = reader;
-            writer = writer;
-            username = username;
-            mods = [];
-        }
+        channels |> List.iter (User.joinChannel user)
 
-        let agent = MailboxProcessor.Start (fun inbox ->
-            let rec loop state = async {
-                let! msg = inbox.Receive()
+        let rec loop() =
+            let read = DataLink.readLine link
 
-                let next =
-                    match msg with
-                    | IRC line ->
-                        processMessage line state
-                    | Console input ->
-                        processInput input state
+            if read <> null then
+                let sw = System.Diagnostics.Stopwatch.StartNew()
+                let r = MessageParser.toType read
+                sw.Stop()
+                printfn "%f" sw.Elapsed.TotalMilliseconds
+                r |> printfn "Type: %A"
+                loop()
 
-                return! loop next
-            }
-
-            loop state
-        )
-
-        Async.Start (readMessages agent reader)
-
-        writer |> login username password
-
-        channels
-        |> List.iter (fun c -> join c writer)
-
-        let rec processConsole() =
-            agent.Post (Console (Console.ReadLine()))
-            processConsole()
-
-        processConsole()
+        loop()
     | _ ->
-        printfn "Usage: <username> <oauth>"
+        printfn "Usage: <username> <oauth> |channels|"
 
     0
