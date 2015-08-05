@@ -9,6 +9,7 @@ type User = {
 
 let createAndLogin nick oauth uplink =
     let send = DataLink.queueLine uplink
+    send ""
     send (sprintf "USER %s 0 * :%s" nick nick)
     send (sprintf "PASS %s" oauth)
     send (sprintf "NICK %s" nick)

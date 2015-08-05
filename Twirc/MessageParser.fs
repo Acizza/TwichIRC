@@ -9,6 +9,8 @@ type MessageType =
     | ChatMessage of Channel * User * Message
     | Join of Channel * User
     | Leave of Channel * User
+    | ModeratorJoin of Channel * User
+    | ModeratorLeft of Channel * User
     | Ping of ReplyContent
     | LoginSuccess of User
     | LoginFailed of Message
@@ -26,26 +28,33 @@ let toType str =
         | Some s -> s
         | None -> "<Unknown>"
 
-    let getUser (str:string) =
+    let inline getUser (str:string) =
         str.[1..str.IndexOf '!'-1]
+
+    let inline getChanAndUser str = (str |> getChannel, str |> getUser)
 
     match getCode str with
     | Some "PRIVMSG" ->
-        let channel = str |> getChannel
-        let user = str |> getUser
+        let channel, user = str |> getChanAndUser
         let msg = str.[str.IndexOf " :"+2..]
 
         Some (ChatMessage (channel, user, msg))
     | Some "JOIN" ->
-        let channel = str |> getChannel
-        let user = str |> getUser
-
+        let channel, user = str |> getChanAndUser
         Some (Join (channel, user))
     | Some "PART" ->
-        let channel = str |> getChannel
-        let user = str |> getUser
-
+        let channel, user = str |> getChanAndUser
         Some (Leave (channel, user))
+    | Some "MODE" ->
+        let split = str.Split ' '
+        let status = split.[3].[0]
+
+        let channel = str |> getChannel
+        let user = split.[4]
+
+        if status = '+'
+        then Some (ModeratorJoin (channel, user))
+        else Some (ModeratorLeft (channel, user))
     | Some "PING" ->
         Some (Ping str.["PING ".Length..])
     | Some "004" ->
