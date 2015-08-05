@@ -18,11 +18,14 @@ let main args =
             let read = DataLink.readLine link
 
             if read <> null then
-                let sw = System.Diagnostics.Stopwatch.StartNew()
-                let r = MessageParser.toType read
-                sw.Stop()
-                printfn "%f" sw.Elapsed.TotalMilliseconds
-                r |> printfn "Type: %A"
+                match MessageParser.toType read with
+                | Some x ->
+                    match x with
+                    | MessageParser.Ping content -> DataLink.sendLine link (sprintf "PONG %s" content); printfn "Sending PONG"
+                    | _ -> Display.printMessage x
+                | None ->
+                    ()
+
                 loop()
 
         loop()
