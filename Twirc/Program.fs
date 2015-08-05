@@ -75,7 +75,7 @@ let main args =
 
         let defaultState = {
             dataLink = link;
-            mods = [("a","AA");("b","BB");("b","BBBB");("c","CC")];
+            mods = [];
         }
 
         let rec loop state =
