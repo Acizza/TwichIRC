@@ -32,7 +32,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="Result.fs" />
     <Compile Include="DataLink.fs" />
     <Compile Include="User.fs" />
     <Compile Include="String.fs" />

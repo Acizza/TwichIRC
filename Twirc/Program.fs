@@ -9,8 +9,8 @@ let main args =
     | username::oauth::channels ->
         let get r =
             match r with
-            | Result.Success x -> x
-            | Result.Failure x -> failwith x
+            | DataLink.Success x -> x
+            | DataLink.Failure x -> failwith x
 
         let link = get (DataLink.create "irc.twitch.tv" 6667)
         let user = link |> User.createAndLogin username oauth

@@ -5,13 +5,16 @@
 open System.IO
 open System.Text
 open System.Net.Sockets
-open Result
 
 type Link = {
     client: TcpClient;
     reader: StreamReader;
     writer: StreamWriter;
 }
+
+type Result<'a, 'b> =
+    | Success of 'a
+    | Failure of 'b
 
 let create ip port =
     try

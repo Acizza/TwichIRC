@@ -1,7 +1,5 @@
 ﻿module User
 
-open Result
-
 type User = {
     name: string;
     dataLink: DataLink.Link;
