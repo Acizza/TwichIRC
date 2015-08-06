@@ -37,6 +37,7 @@
     <Compile Include="User.fs" />
     <Compile Include="String.fs" />
     <Compile Include="MessageParser.fs" />
+    <Compile Include="State.fs" />
     <Compile Include="Display.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
