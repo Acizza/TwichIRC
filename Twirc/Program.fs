@@ -12,15 +12,15 @@ let main args =
             | DataLink.Success x -> x
             | DataLink.Failure x -> failwith x
 
-        let link = get (DataLink.create "irc.twitch.tv" 6667)
-        let user = link |> User.createAndLogin username oauth
+        let uplink = get (DataLink.create "irc.twitch.tv" 6667)
+        uplink |> IRC.sendLogin username oauth
 
         // Must request to receive joins, leaves, and operator status changes
-        DataLink.sendLine link "CAP REQ :twitch.tv/membership"
-        channels |> List.iter (User.joinChannel user)
+        DataLink.sendLine uplink "CAP REQ :twitch.tv/membership"
+        channels |> List.iter (IRC.joinChannel uplink)
 
         let defaultState : State.State = {
-            dataLink = link;
+            dataLink = uplink;
             mods = [];
         }
 
@@ -33,7 +33,7 @@ let main args =
                     | Some x ->
                         match x with
                         | MessageParser.Ping content ->
-                            DataLink.sendLine link (sprintf "PONG %s" content)
+                            DataLink.sendLine state.dataLink (sprintf "PONG %s" content)
                             state
                         | _ ->
                             let msg, newState = State.update x state
