@@ -19,7 +19,9 @@ let processMessage msg state =
         printTime()
         cprintf ConsoleColor.Cyan "<%s> " channel
 
-        if user |> isModerator channel then
+        if user = channel then
+            cprintf ConsoleColor.Gray "[B] "
+        elif user |> isModerator channel then
             cprintf ConsoleColor.Gray "[M] "
 
         cprintf ConsoleColor.Yellow "%s" user
