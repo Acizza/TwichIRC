@@ -19,32 +19,33 @@ let main args =
         DataLink.sendLine uplink "CAP REQ :twitch.tv/membership"
         channels |> List.iter (IRC.joinChannel uplink)
 
-        let defaultState : State.State = {
+        let defaultState : Client.State = {
             dataLink = uplink;
             mods = [];
         }
 
-        let rec loop (state:State.State) =
-            let read = DataLink.readLine state.dataLink
+        // Temp
+        Dispatch.initialState <- defaultState
+
+        let rec readMessages link = async {
+            let read = DataLink.readLine link
 
             if read <> null then
-                let newState =
-                    match MessageParser.toType read with
-                    | Some x ->
-                        match x with
-                        | MessageParser.Ping content ->
-                            DataLink.sendLine state.dataLink (sprintf "PONG %s" content)
-                            state
-                        | _ ->
-                            let msg, newState = State.update x state
-                            Display.printMessage msg newState
-                            newState
-                    | None ->
-                        state
+                match MessageParser.toType read with
+                | Some x ->
+                    Dispatch.fromIRC x
+                | None -> ()
 
-                loop newState
+                return! readMessages link
+        }
 
-        loop defaultState
+        Async.Start (readMessages uplink)
+
+        let rec readConsole() =
+            Dispatch.fromConsole (Console.ReadLine())
+            readConsole()
+
+        readConsole()
     | _ ->
         printfn "Usage: <username> <oauth> |channels|"
 

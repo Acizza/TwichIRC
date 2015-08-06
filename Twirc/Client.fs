@@ -1,10 +1,14 @@
-﻿module Display
+﻿module Client
 
 open System
 open MessageParser
-open State
 
-let cprintf color fmt =
+type State = {
+    dataLink: DataLink.Link;
+    mods: (Channel * User) list;
+}
+
+let private cprintf color fmt =
     Printf.kprintf
         (fun s ->
             let old = Console.ForegroundColor
@@ -14,18 +18,18 @@ let cprintf color fmt =
         )
         fmt
 
-let printTime() =
+let private printTime() =
     let time = DateTime.Now.ToString "[hh:mm:ss tt]"
     cprintf ConsoleColor.Green "%s " time
 
-let printStatusMessage channel user status =
+let private printStatusMessage channel user status =
     printTime()
     cprintf ConsoleColor.Cyan "<%s> " channel
     cprintf ConsoleColor.White "%s " user
     cprintf ConsoleColor.Magenta "%s " status
     printfn ""
 
-let printMessage msg state =
+let processMessage msg state =
     let isModerator channel user =
         state.mods
         |> List.exists (fun (chan, uname) -> chan = channel && uname = user)    
@@ -43,18 +47,49 @@ let printMessage msg state =
         cprintf ConsoleColor.Yellow "%s" user
         cprintf ConsoleColor.White ": %s" msg
         printfn ""
+        state
     | Join (channel, username) ->
         printStatusMessage channel username "joined"
+        state
     | Leave (channel, username) ->
         printStatusMessage channel username "left"
+        state
+    | ModeratorJoin (channel, user) ->
+        printTime()
+        cprintf ConsoleColor.Cyan "<%s> " channel
+        cprintf ConsoleColor.Magenta "Moderator "
+        cprintf ConsoleColor.White "%s" user
+        cprintf ConsoleColor.Magenta " joined"
+        printfn ""
+
+        let newMods = (channel, user)::state.mods
+        {state with mods = newMods}
+    | ModeratorLeft (channel, user) ->
+        printTime()
+        cprintf ConsoleColor.Cyan "<%s> " channel
+        cprintf ConsoleColor.Magenta "Moderator "
+        cprintf ConsoleColor.White "%s" user
+        cprintf ConsoleColor.Magenta " left"
+        printfn ""
+
+        // TODO: Ensure only moderators from the current channel are removed
+        let newMods =
+            state.mods
+            |> List.filter (fun (_, uname) -> uname <> user)
+
+        {state with mods = newMods}
+    | Ping content ->
+        DataLink.sendLine state.dataLink (sprintf "PONG %s" content)
+        state
     | LoginSuccess username ->
         printTime()
         cprintf ConsoleColor.White "Logged in as "
         cprintf ConsoleColor.Yellow "%s" username
         printfn ""
+        state
     | LoginFailed reason ->
         printTime()
         cprintf ConsoleColor.Red "Failed to login: "
         cprintf ConsoleColor.White "%s" reason
         printfn ""
-    | _ -> ()
+        state
