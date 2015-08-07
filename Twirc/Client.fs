@@ -20,13 +20,13 @@ let private cprintf color fmt =
 
 let private printTime() =
     let time = DateTime.Now.ToString "[hh:mm:ss tt]"
-    cprintf ConsoleColor.Green "%s " time
+    cprintf ConsoleColor.DarkGray "%s " time
 
 let private printStatusMessage channel user status =
     printTime()
-    cprintf ConsoleColor.Cyan "<%s> " channel
-    cprintf ConsoleColor.White "%s " user
-    cprintf ConsoleColor.Magenta "%s " status
+    cprintf ConsoleColor.DarkCyan "<%s> " channel
+    cprintf ConsoleColor.DarkYellow "%s " user
+    cprintf ConsoleColor.DarkMagenta "%s " status
     printfn ""
 
 let processMessage msg state =
@@ -37,15 +37,15 @@ let processMessage msg state =
     match msg with
     | ChatMessage (channel, user, msg) ->
         printTime()
-        cprintf ConsoleColor.Cyan "<%s> " channel
+        cprintf ConsoleColor.DarkCyan "<%s> " channel
 
         if user = channel then
-            cprintf ConsoleColor.Gray "[B] "
+            cprintf ConsoleColor.DarkGray "[B] "
         elif user |> isModerator channel then
-            cprintf ConsoleColor.Gray "[M] "
+            cprintf ConsoleColor.DarkGray "[M] "
 
-        cprintf ConsoleColor.Yellow "%s" user
-        cprintf ConsoleColor.White ": %s" msg
+        cprintf ConsoleColor.DarkGreen "%s" user
+        cprintf ConsoleColor.Gray ": %s" msg
         printfn ""
         state
     | Join (channel, username) ->
@@ -56,20 +56,20 @@ let processMessage msg state =
         state
     | ModeratorJoin (channel, user) ->
         printTime()
-        cprintf ConsoleColor.Cyan "<%s> " channel
-        cprintf ConsoleColor.Magenta "Moderator "
-        cprintf ConsoleColor.White "%s" user
-        cprintf ConsoleColor.Magenta " joined"
+        cprintf ConsoleColor.DarkCyan "<%s> " channel
+        cprintf ConsoleColor.DarkMagenta "Moderator "
+        cprintf ConsoleColor.DarkYellow "%s" user
+        cprintf ConsoleColor.DarkMagenta " joined"
         printfn ""
 
         let newMods = (channel, user)::state.mods
         {state with mods = newMods}
     | ModeratorLeft (channel, user) ->
         printTime()
-        cprintf ConsoleColor.Cyan "<%s> " channel
-        cprintf ConsoleColor.Magenta "Moderator "
-        cprintf ConsoleColor.White "%s" user
-        cprintf ConsoleColor.Magenta " left"
+        cprintf ConsoleColor.DarkCyan "<%s> " channel
+        cprintf ConsoleColor.DarkMagenta "Moderator "
+        cprintf ConsoleColor.DarkYellow "%s" user
+        cprintf ConsoleColor.DarkMagenta " left"
         printfn ""
 
         // TODO: Ensure only moderators from the current channel are removed
@@ -83,13 +83,13 @@ let processMessage msg state =
         state
     | LoginSuccess username ->
         printTime()
-        cprintf ConsoleColor.White "Logged in as "
-        cprintf ConsoleColor.Yellow "%s" username
+        cprintf ConsoleColor.Gray "Logged in as "
+        cprintf ConsoleColor.DarkYellow "%s" username
         printfn ""
         state
     | LoginFailed reason ->
         printTime()
-        cprintf ConsoleColor.Red "Failed to login: "
-        cprintf ConsoleColor.White "%s" reason
+        cprintf ConsoleColor.DarkRed "Failed to login: "
+        cprintf ConsoleColor.Gray "%s" reason
         printfn ""
         state
