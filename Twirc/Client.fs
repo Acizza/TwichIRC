@@ -2,6 +2,7 @@
 
 open System
 open Message
+open Display
 
 type State = {
     dataLink: DataLink.Link;
@@ -13,27 +14,6 @@ with
         mods = [];
     }
 
-let private cprintf color fmt =
-    Printf.kprintf
-        (fun s ->
-            let old = Console.ForegroundColor
-            Console.ForegroundColor <- color
-            Console.Write s
-            Console.ForegroundColor <- old
-        )
-        fmt
-
-let private printTime() =
-    let time = DateTime.Now.ToString "[hh:mm:ss tt]"
-    cprintf ConsoleColor.DarkGray "%s " time
-
-let private printStatusMessage channel user status =
-    printTime()
-    cprintf ConsoleColor.DarkCyan "<%s> " channel
-    cprintf ConsoleColor.DarkYellow "%s " user
-    cprintf ConsoleColor.DarkMagenta "%s " status
-    printfn ""
-
 let processMessage msg state =
     let isModerator channel user =
         state.mods
@@ -41,8 +21,7 @@ let processMessage msg state =
 
     match msg with
     | ChatMessage (channel, user, msg) ->
-        printTime()
-        cprintf ConsoleColor.DarkCyan "<%s> " channel
+        printTimeAndChannel channel
 
         if user = channel then
             cprintf ConsoleColor.DarkGray "[B] "
@@ -60,8 +39,7 @@ let processMessage msg state =
         printStatusMessage channel username "left"
         state
     | ModeratorJoin (channel, user) ->
-        printTime()
-        cprintf ConsoleColor.DarkCyan "<%s> " channel
+        printTimeAndChannel channel
         cprintf ConsoleColor.DarkMagenta "Moderator "
         cprintf ConsoleColor.DarkYellow "%s" user
         cprintf ConsoleColor.DarkMagenta " joined"
@@ -70,8 +48,7 @@ let processMessage msg state =
         let newMods = (channel, user)::state.mods
         {state with mods = newMods}
     | ModeratorLeft (channel, user) ->
-        printTime()
-        cprintf ConsoleColor.DarkCyan "<%s> " channel
+        printTimeAndChannel channel
         cprintf ConsoleColor.DarkMagenta "Moderator "
         cprintf ConsoleColor.DarkYellow "%s" user
         cprintf ConsoleColor.DarkMagenta " left"

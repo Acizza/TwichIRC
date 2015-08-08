@@ -35,6 +35,7 @@
     <Compile Include="DataLink.fs" />
     <Compile Include="IRC.fs" />
     <Compile Include="Message.fs" />
+    <Compile Include="Display.fs" />
     <Compile Include="Client.fs" />
     <Compile Include="Console.fs" />
     <Compile Include="Dispatch.fs" />
