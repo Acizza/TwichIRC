@@ -7,6 +7,11 @@ type State = {
     dataLink: DataLink.Link;
     mods: (Channel * User) list;
 }
+with
+    static member Zero = {
+        dataLink = {client = null; reader = null; writer = null};
+        mods = [];
+    }
 
 let private cprintf color fmt =
     Printf.kprintf

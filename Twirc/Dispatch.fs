@@ -3,12 +3,7 @@
 type Type =
     | IRC of Message.MessageType
     | Console of string
-
-// Temp
-let mutable initialState : Client.State = {
-    dataLink = {client = null; reader = null; writer = null};
-    mods = [];
-}
+    | NewState of Client.State
 
 let private agent = MailboxProcessor.Start (fun inbox ->
     let rec loop state = async {
@@ -18,13 +13,15 @@ let private agent = MailboxProcessor.Start (fun inbox ->
             match msg with
             | IRC msg -> Client.processMessage msg state
             | Console str -> Console.processMessage str state
+            | NewState s -> s
 
         return! loop nextState
     }
     
-    loop initialState
+    loop Client.State.Zero
 )
 
 let fromType t = agent.Post t
 let fromIRC t = agent.Post (IRC t)
 let fromConsole t = agent.Post (Console t)
+let fromState t = agent.Post (NewState t)

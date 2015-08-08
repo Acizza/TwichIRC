@@ -19,14 +19,6 @@ let main args =
         DataLink.sendLine uplink "CAP REQ :twitch.tv/membership"
         channels |> List.iter (IRC.joinChannel uplink)
 
-        let defaultState : Client.State = {
-            dataLink = uplink;
-            mods = [];
-        }
-
-        // Temp
-        Dispatch.initialState <- defaultState
-
         let rec readMessages link = async {
             let str = DataLink.readLine link
 
@@ -38,6 +30,12 @@ let main args =
                 return! readMessages link
         }
 
+        let defaultState : Client.State = {
+            dataLink = uplink;
+            mods = [];
+        }
+
+        Dispatch.fromState defaultState
         Async.Start (readMessages uplink)
 
         let rec readConsole() =

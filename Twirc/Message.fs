@@ -36,9 +36,9 @@ type MessageType =
     | LoginFailed of Message
 
 let getCode (str:string) =
-    if str.StartsWith "PING" then
-        Some "PING"
-    else
+    match str.StartsWith "PING" with
+    | true -> Some "PING"
+    | false ->
         let split = str.Split ' '
         if split.Length > 1 then Some split.[1] else None
 
