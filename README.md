@@ -17,3 +17,4 @@ Command | Arguments
 join    | channel(s)
 leave   | channel(s)
 send    | channel, message
+mods    | channel
