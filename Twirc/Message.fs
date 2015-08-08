@@ -1,4 +1,24 @@
-﻿module MessageParser
+﻿module Message
+
+module private String =
+    let between (start:string) (finish:string[]) (str:string) =
+        let sIdx = str.IndexOf start
+
+        if sIdx = -1 then
+            None
+        else
+            let newStr = str.[sIdx+start.Length..]
+
+            // Finds the first valid finish index
+            let eIdx =
+                finish
+                |> Array.map newStr.IndexOf
+                |> Array.filter (fun x -> x <> -1)
+                |> (fun x -> if x.Length > 0 then x.[0] else newStr.Length)
+
+            if eIdx = -1
+            then None
+            else Some newStr.[..eIdx-1]
 
 type Channel = string
 type User = string
@@ -22,15 +42,13 @@ let getCode (str:string) =
         let split = str.Split ' '
         if split.Length > 1 then Some split.[1] else None
 
-let toType str =
+let read str =
     let getChannel str =
         match str |> String.between "#" [|" "; "\r"|] with
         | Some s -> s
         | None -> "<Unknown>"
 
-    let inline getUser (str:string) =
-        str.[1..str.IndexOf '!'-1]
-
+    let inline getUser (str:string) = str.[1..str.IndexOf '!'-1]
     let inline getChanAndUser str = (str |> getChannel, str |> getUser)
 
     match getCode str with

@@ -1,7 +1,7 @@
 ﻿module Program
 
 open System
-open MessageParser
+open Message
 
 [<EntryPoint>]
 let main args =
@@ -28,12 +28,11 @@ let main args =
         Dispatch.initialState <- defaultState
 
         let rec readMessages link = async {
-            let read = DataLink.readLine link
+            let str = DataLink.readLine link
 
-            if read <> null then
-                match MessageParser.toType read with
-                | Some x ->
-                    Dispatch.fromIRC x
+            if str <> null then
+                match Message.read str with
+                | Some x -> Dispatch.fromIRC x
                 | None -> ()
 
                 return! readMessages link

@@ -1,7 +1,7 @@
 ﻿module Dispatch
 
 type Type =
-    | IRC of MessageParser.MessageType
+    | IRC of Message.MessageType
     | Console of string
 
 // Temp

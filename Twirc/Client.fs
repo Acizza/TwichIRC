@@ -1,7 +1,7 @@
 ﻿module Client
 
 open System
-open MessageParser
+open Message
 
 type State = {
     dataLink: DataLink.Link;
