@@ -33,7 +33,6 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="DataLink.fs" />
-    <Compile Include="IRC.fs" />
     <Compile Include="Message.fs" />
     <Compile Include="Display.fs" />
     <Compile Include="Client.fs" />

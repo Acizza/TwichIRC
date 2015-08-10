@@ -4,19 +4,19 @@ open System
 open Client
 open Display
 
-let processMessage (str:string) state =
+let processMessage (str:string) (state:Client.State) =
     let args = str.Split ' ' |> Array.toList
 
     match args with
     | "join"::channels ->
-        channels |> List.iter (IRC.joinChannel state.dataLink)
-        state
+        channels
+        |> List.fold Client.joinChannel state
     | "leave"::channels ->
-        channels |> List.iter (IRC.leaveChannel state.dataLink)
-        state
+        channels
+        |> List.fold Client.leaveChannel state
     | "send"::channel::messages ->
         let msg = messages |> String.concat " "
-        IRC.sendMessage state.dataLink channel msg
+        Client.sendMessage state channel msg
         state
     | "mods"::channel::_ ->
         let mods =

@@ -6,13 +6,46 @@ open Display
 
 type State = {
     dataLink: DataLink.Link;
+    channels: Channel list;
     mods: (Channel * User) list;
 }
 with
     static member Zero = {
         dataLink = {client = null; reader = null; writer = null};
+        channels = [];
         mods = [];
     }
+
+let sendLogin nick oauth uplink =
+    let send = DataLink.queueLine uplink
+    send ""
+    send (sprintf "USER %s 0 * :%s" nick nick)
+    send (sprintf "PASS %s" oauth)
+    send (sprintf "NICK %s" nick)
+    DataLink.flush uplink
+
+let joinChannel state channel =
+    DataLink.sendLine state.dataLink (sprintf "JOIN #%s" channel)
+    {state with channels = channel::state.channels}
+
+let leaveChannel state channel =
+    DataLink.sendLine state.dataLink (sprintf "PART #%s" channel)
+
+    let newChannels =
+        state.channels
+        |> List.filter ((<>) channel)
+
+    let newMods =
+        state.mods
+        |> List.filter (fun (chan,_) -> chan <> channel)
+
+    {state with
+        channels = newChannels;
+        mods = newMods;
+    }
+
+let inline sendMessage state channel msg =
+    DataLink.sendLine state.dataLink (sprintf "PRIVMSG #%s :%s" channel msg)
 
 let processMessage msg state =
     let isModerator channel user =
