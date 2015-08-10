@@ -12,9 +12,10 @@ Twirc.exe test oauth:abc12345 channel1 channel2...
 
 Once logged in, you can use several commands:
 
-Command | Arguments
-------- | ---------
-join    | channel(s)
-leave   | channel(s)
-send    | channel, message
-mods    | channel
+Command  | Arguments        | Description
+-------  | ---------------- | -----------
+join     | channel(s)       | Joins the specified channels.
+leave    | channel(s)       | Leaves the specified channels.
+send     | channel, message | Sends a message to the specified channel.
+mods     | channel          | Prints the moderators of the specified channel.
+channels | \<none>          | Prints the list of currently connected channels.
