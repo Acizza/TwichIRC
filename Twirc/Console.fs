@@ -34,5 +34,19 @@ let processMessage (str:string) (state:Client.State) =
 
         mods |> List.iter printMod
         state
+    | "channels"::_ ->
+        let channels = state.channels
+
+        printTime()
+        cprintf ConsoleColor.DarkYellow "%d" channels.Length
+        cprintf ConsoleColor.DarkMagenta " Channels:%s" Environment.NewLine
+
+        let printChannel channel =
+            printTime()
+            cprintf ConsoleColor.DarkYellow "%s" channel
+            printfn ""
+
+        channels |> List.iter printChannel
+        state
     | _ ->
         state
