@@ -48,5 +48,8 @@ let processMessage (str:string) (state:Client.State) =
 
         channels |> List.iter printChannel
         state
+    | "leaveall"::_ ->
+        state.channels
+        |> List.fold Client.leaveChannel state
     | _ ->
         state
