@@ -103,8 +103,5 @@ let processMessage msg state =
         printfn ""
         state
     | LoginFailed reason ->
-        printTime()
-        cprintf ConsoleColor.DarkRed "Failed to login: "
-        cprintf ConsoleColor.Gray "%s" reason
-        printfn ""
+        printErrorStatus "Failed to login" reason
         state

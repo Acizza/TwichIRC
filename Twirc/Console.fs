@@ -52,13 +52,8 @@ let processMessage (str:string) (state:Client.State) =
         state.channels
         |> List.fold Client.leaveChannel state
     | [] | ""::_ ->
-        printTime()
-        cprintf ConsoleColor.DarkRed "Input must not be empty"
-        printfn ""
+        printError "Input must not be empty"
         state
     | command::_ ->
-        printTime()
-        cprintf ConsoleColor.DarkRed "Invalid command: "
-        cprintf ConsoleColor.DarkGray "%s" command
-        printfn ""
+        printErrorStatus "Invalid command" command
         state

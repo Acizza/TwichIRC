@@ -33,10 +33,7 @@ let read path =
             | "password" | "pass" ->
                 {s with password = value}
             | _ ->
-                printTime()
-                cprintf ConsoleColor.DarkRed "Unknown setting: "
-                cprintf ConsoleColor.DarkGray "%s" name
-                printfn ""
+                printErrorStatus "Unknown setting" name
                 s
 
         let vIndex (i:int) (m:Match) = m.Groups.[i].Value.Trim()
