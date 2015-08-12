@@ -42,7 +42,7 @@ let getCode (str:string) =
         let split = str.Split ' '
         if split.Length > 1 then Some split.[1] else None
 
-let read str =
+let readType str =
     let getChannel str =
         match str |> String.between "#" [|" "; "\r"|] with
         | Some s -> s

@@ -16,6 +16,17 @@ let inline printTime() =
     let time = DateTime.Now.ToString "[hh:mm:ss tt]"
     cprintf ConsoleColor.DarkGray "%s " time
 
+let printError msg =
+    printTime()
+    cprintf ConsoleColor.DarkRed "%s" msg
+    printfn ""
+
+let printErrorStatus header msg =
+    printTime()
+    cprintf ConsoleColor.DarkRed "%s: " header
+    cprintf ConsoleColor.DarkGray "%s" msg
+    printfn ""
+
 let inline printChannel channel =
     cprintf ConsoleColor.DarkCyan "<%s> " channel
 
