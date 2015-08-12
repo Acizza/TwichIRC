@@ -10,7 +10,12 @@ type Link = {
     client: TcpClient;
     reader: StreamReader;
     writer: StreamWriter;
-}
+} with
+    static member Zero = {
+        client = null;
+        reader = null;
+        writer = null;
+    }
 
 type Result<'a, 'b> =
     | Success of 'a

@@ -11,7 +11,7 @@ type State = {
 }
 with
     static member Zero = {
-        dataLink = {client = null; reader = null; writer = null};
+        dataLink = DataLink.Link.Zero;
         channels = [];
         mods = [];
     }
