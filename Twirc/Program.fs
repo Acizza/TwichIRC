@@ -59,8 +59,13 @@ let startProcessing (state:Client.State) =
 let run username oauth channels =
     let (>>=) s f = Option.bind f s
 
+    let uploadState s =
+        Dispatch.fromState s
+        Some s
+
     initialize username oauth
     >>= getInitialState channels
+    >>= uploadState
     >>= startProcessing
     |> ignore
 
