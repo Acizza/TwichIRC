@@ -1,13 +1,24 @@
 Usage
 =====
-Simply launch the executable with your username and oauth code:
+
+You can launch the program in several ways:
+
+With your username and oauth code:
 ```
 Twirc.exe test oauth:abc12345
 ```
 
-Or with channels to join after logging in:
+With channels to join after logging in:
 ```
 Twirc.exe test oauth:abc12345 channel1 channel2...
+```
+
+Or, if you have created a settings.cfg file, you can launch it with no arguments or the channels you wish to join after logging in.
+
+A typical settings.cfg file looks like this:
+```
+username:<user>
+password:<oauth code>
 ```
 
 Once logged in, you can use several commands:
