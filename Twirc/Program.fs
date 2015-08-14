@@ -76,7 +76,7 @@ let main args =
         run username oauth channels
     | channels ->
         match Settings.read settingsFile with
-        | Some x -> run x.username x.password channels
+        | Some x -> run x.username x.password (channels |> List.append x.joinChannels)
         | None -> printfn "Usage: <username> <oauth> |channels|"
 
     0

@@ -7,14 +7,17 @@ open Display
 
 type Username = string
 type Password = string
+type Channel = string
 
 type Settings = {
     username: Username;
     password: Password;
+    joinChannels: Channel list;
 } with
     static member Zero = {
         username = "";
         password = "";
+        joinChannels = [];
     }
 
 let read path =
@@ -32,6 +35,9 @@ let read path =
                 {s with username = value}
             | "password" | "pass" ->
                 {s with password = value}
+            | "channels" ->
+                let c = value.Split ' ' |> Array.toList
+                {s with joinChannels = c}
             | _ ->
                 printErrorStatus "Unknown setting" name
                 s
