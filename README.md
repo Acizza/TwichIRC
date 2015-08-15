@@ -19,7 +19,9 @@ A typical settings.cfg file looks like this:
 ```
 username:<user>
 password:<oauth code>
+channels:<channels to join after login>
 ```
+Note that the channel setting is optional.
 
 Once logged in, you can use several commands:
 
