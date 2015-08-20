@@ -31,7 +31,8 @@
     <Optimize>true</Optimize>
     <Tailcalls>true</Tailcalls>
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>
+    </DefineConstants>
     <WarningLevel>3</WarningLevel>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DocumentationFile>bin\Release\Twirc.XML</DocumentationFile>
@@ -48,13 +49,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="Util.fs" />
     <Compile Include="DataLink.fs" />
     <Compile Include="Message.fs" />
+    <Compile Include="Settings.fs" />
     <Compile Include="Display.fs" />
     <Compile Include="Client.fs" />
     <Compile Include="Console.fs" />
     <Compile Include="Dispatch.fs" />
-    <Compile Include="Settings.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
   </ItemGroup>

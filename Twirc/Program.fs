@@ -11,9 +11,6 @@ let serverIP = "irc.twitch.tv"
 [<Literal>]
 let serverPort = 6667
 
-[<Literal>]
-let settingsFile = "settings.cfg"
-
 let initialize username password =
     let uplink = DataLink.create serverIP serverPort
 
@@ -75,7 +72,7 @@ let main args =
     | username::oauth::channels ->
         run username oauth channels
     | channels ->
-        match Settings.read settingsFile with
+        match Settings.readDefault() with
         | Some x -> run x.username x.password (channels |> List.append x.joinChannels)
         | None -> printfn "Usage: <username> <oauth> |channels|"
 

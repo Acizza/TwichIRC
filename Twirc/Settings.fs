@@ -3,24 +3,31 @@
 open System
 open System.IO
 open System.Text.RegularExpressions
-open Display
 
 type Username = string
 type Password = string
 type Channel = string
 
+type Name = string
+type Value = string
+
 type Settings = {
     username: Username;
     password: Password;
     joinChannels: Channel list;
+    other: Map<Name, Value>;
 } with
     static member Zero = {
         username = "";
         password = "";
         joinChannels = [];
+        other = Map.empty;
     }
 
-let read path =
+[<Literal>]
+let defaultFile = "settings.cfg"
+
+let forceRead path =
     match File.Exists path with
     | true ->
         let options =
@@ -39,8 +46,7 @@ let read path =
                 let c = value.Split ' ' |> Array.toList
                 {s with joinChannels = c}
             | _ ->
-                printErrorStatus "Unknown setting" name
-                s
+                {s with other = s.other |> Map.add name value}
 
         let vIndex (i:int) (m:Match) = m.Groups.[i].Value.Trim()
 
@@ -55,3 +61,8 @@ let read path =
         Some settings
     | false ->
         None
+
+/// Returns cached version of settings file, or tries to read it
+let read = Util.memoize forceRead
+/// Returns cached version of settings file, or tries to read it
+let readDefault() = defaultFile |> Util.memoize forceRead
