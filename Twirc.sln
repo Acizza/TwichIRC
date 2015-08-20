@@ -1,7 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
-Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "Twirc", "Twirc\Twirc.fsproj", "{9EABF159-9BDD-4B00-AB5C-0F6FB2FFEAC8}"
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Twirc", "Twirc\Twirc.fsproj", "{F0F02699-81BA-48AE-A260-5BC332956F07}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -9,9 +11,12 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{9EABF159-9BDD-4B00-AB5C-0F6FB2FFEAC8}.Debug|x86.ActiveCfg = Debug|x86
-		{9EABF159-9BDD-4B00-AB5C-0F6FB2FFEAC8}.Debug|x86.Build.0 = Debug|x86
-		{9EABF159-9BDD-4B00-AB5C-0F6FB2FFEAC8}.Release|x86.ActiveCfg = Release|x86
-		{9EABF159-9BDD-4B00-AB5C-0F6FB2FFEAC8}.Release|x86.Build.0 = Release|x86
+		{F0F02699-81BA-48AE-A260-5BC332956F07}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F0F02699-81BA-48AE-A260-5BC332956F07}.Debug|x86.Build.0 = Debug|Any CPU
+		{F0F02699-81BA-48AE-A260-5BC332956F07}.Release|x86.ActiveCfg = Release|Any CPU
+		{F0F02699-81BA-48AE-A260-5BC332956F07}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 EndGlobal

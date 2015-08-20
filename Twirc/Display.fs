@@ -12,7 +12,7 @@ let cprintf color fmt =
         )
         fmt
 
-let inline printTime() =
+let printTime() =
     let time = DateTime.Now.ToString "[hh:mm:ss tt]"
     cprintf ConsoleColor.DarkGray "%s " time
 
@@ -27,10 +27,10 @@ let printErrorStatus header msg =
     cprintf ConsoleColor.DarkGray "%s" msg
     printfn ""
 
-let inline printChannel channel =
+let printChannel channel =
     cprintf ConsoleColor.DarkCyan "<%s> " channel
 
-let inline printTimeAndChannel channel =
+let printTimeAndChannel channel =
     printTime()
     printChannel channel
 
