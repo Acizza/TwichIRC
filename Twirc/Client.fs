@@ -96,10 +96,9 @@ let processMessage msg state =
         cprintf ConsoleColor.DarkMagenta " left"
         printfn ""
 
-        // TODO: Ensure only moderators from the current channel are removed
         let newMods =
             state.mods
-            |> List.filter (fun (_, uname) -> uname <> user)
+            |> List.filter (fun (chan, uname) -> if chan = channel then uname <> user else true)
 
         {state with mods = newMods}
     | Ping content ->
