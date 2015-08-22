@@ -56,7 +56,7 @@
     <Compile Include="Settings.fs" />
     <Compile Include="Display.fs" />
     <Compile Include="Client.fs" />
-    <Compile Include="Console.fs" />
+    <Compile Include="Command.fs" />
     <Compile Include="Dispatch.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />

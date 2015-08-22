@@ -47,7 +47,7 @@ let startProcessing (state:Client.State) =
     }
 
     let rec processConsole() =
-        Dispatch.fromConsole (Console.ReadLine())
+        Dispatch.fromCommand (Console.ReadLine())
         processConsole()
 
     Async.Start (processServer state.dataLink)
