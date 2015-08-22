@@ -4,6 +4,8 @@ open System
 open Client
 open Display
 
+//* Start of command list *\\
+
 let private joinCommand state =
     List.fold Client.joinChannel state
 
@@ -57,7 +59,7 @@ let private leaveallCommand state _ =
     state.channels
     |> List.fold Client.leaveChannel state
 
-
+//* End of command list *\\
 
 type Name = string
 type UsageDesc = string
@@ -73,8 +75,6 @@ let commands : (Name * UsageDesc * ArgCount * Callback) array = [|
     ("channels", "", 0, channelsCommand);
     ("leaveall", "", 0, leaveallCommand);
 |]
-
-
 
 let find name =
     commands
@@ -104,6 +104,22 @@ let execute (str:string) (state:Client.State) =
 
             state
         | _ -> func state args
+    | "commands"::_ -> // TODO: Look into better way of handling commands that reference the command list
+        printTime()
+        cprintf ConsoleColor.DarkYellow "%d" commands.Length
+        cprintf ConsoleColor.DarkMagenta " Commands:%s" Environment.NewLine
+
+        let printCommand c =
+            printTime()
+
+            let (name,usageDesc,_,_) = c
+            cprintf ConsoleColor.DarkYellow "%s" name
+            cprintf ConsoleColor.DarkGray " %s" usageDesc
+
+            printfn ""
+
+        commands |> Array.iter printCommand
+        state
     | [] | [""] ->
         printError "Input must not be empty"
         state
