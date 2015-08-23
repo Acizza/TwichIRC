@@ -33,3 +33,4 @@ send     | channel, message | Sends a message to the specified channel.
 mods     | channel          | Prints the moderators of the specified channel.
 channels | \<none>          | Prints the list of currently connected channels.
 leaveall | \<none>          | Leaves all connected channels.
+commands | \<none>          | Prints all commands with their usage.
