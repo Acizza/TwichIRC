@@ -15,14 +15,32 @@ Twirc.exe test oauth:abc12345 channel1 channel2...
 
 Or, if you have created a settings.cfg file, you can launch it with no arguments or the channels you wish to join after logging in.
 
-A typical settings.cfg file looks like this:
+Settings
+========
+If you want to change the colors of the interface, join certain channels every time you launch the program, or enable auto-login, you'll have to create a file in the root directory called _settings.cfg_.
+
+A typical settings file looks like this:
 ```
-username:<user>
-password:<oauth code>
+username:<Twitch username>
+password:<Twitch oauth code>
 channels:<channels to join after login>
 ```
-Note that the "channels" setting is optional.
+Note that the channels setting is optional.
 
+If you don't like the default colors of the interface, you can change them. To replace a certain color, add this to your settings file:
+```
+color<color to replace>:<new color>
+```
+
+For example:
+```
+colorDarkRed:Magenta
+```
+
+For a full list of colors, take a look [here.](https://msdn.microsoft.com/en-us/library/system.consolecolor(v=vs.110).aspx)
+
+Commands
+========
 Once logged in, you can use several commands:
 
 Command  | Arguments        | Description
