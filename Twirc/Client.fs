@@ -53,7 +53,7 @@ let processMessage msg state =
         |> List.exists (fun (chan, uname) -> chan = channel && uname = user)    
 
     match msg with
-    | ChatMessage (channel, user, msg)
+    | ChatMessage (channel, user, msg) // Subscriptions
         when user = "twitchnotify" ->
 
         let subIdx = msg.IndexOf ' '
@@ -61,6 +61,12 @@ let processMessage msg state =
         let subMsg = msg.[subIdx+1..]
 
         printStatusMessage channel sub subMsg
+        state
+    | ChatMessage (channel, user, msg) // /me command
+        when msg.StartsWith "\001ACTION" ->
+        
+        let action = msg.["\001ACTION".Length+1..msg.Length-2]
+        printStatusMessage channel user action
         state
     | ChatMessage (channel, user, msg) ->
         printTimeAndChannel channel

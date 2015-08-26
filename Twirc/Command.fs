@@ -61,6 +61,8 @@ let private leaveallCommand state _ =
 
 //* End of command list *\\
 
+
+
 type Name = string
 type UsageDesc = string
 type ArgCount = int
@@ -75,6 +77,8 @@ let commands : (Name * UsageDesc * ArgCount * Callback) array = [|
     ("channels", "", 0, channelsCommand);
     ("leaveall", "", 0, leaveallCommand);
 |]
+
+
 
 let find name =
     commands
