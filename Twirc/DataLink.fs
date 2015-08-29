@@ -5,6 +5,7 @@
 open System.IO
 open System.Text
 open System.Net.Sockets
+open Result
 
 type Link = {
     client: TcpClient;
@@ -16,10 +17,6 @@ type Link = {
         reader = null;
         writer = null;
     }
-
-type Result<'a, 'b> =
-    | Success of 'a
-    | Failure of 'b
 
 let create ip port =
     try

@@ -16,6 +16,8 @@ with
         mods = [];
     }
 
+let createFromUplink uplink = {State.Zero with dataLink = uplink}
+
 let sendLogin nick oauth uplink =
     let send = DataLink.queueLine uplink
     send ""

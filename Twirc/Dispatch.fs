@@ -3,7 +3,7 @@
 type Type =
     | IRC of Message.MessageType
     | Command of string
-    | NewState of Client.State
+    | NewClient of Client.State
 
 let private agent = MailboxProcessor.Start (fun inbox ->
     let rec loop state = async {
@@ -13,7 +13,7 @@ let private agent = MailboxProcessor.Start (fun inbox ->
             match msg with
             | IRC msg -> Client.processMessage msg state
             | Command str -> Command.execute str state
-            | NewState s -> s
+            | NewClient s -> s
 
         return! loop nextState
     }
@@ -24,4 +24,4 @@ let private agent = MailboxProcessor.Start (fun inbox ->
 let fromType t = agent.Post t
 let fromIRC t = agent.Post (IRC t)
 let fromCommand t = agent.Post (Command t)
-let fromState t = agent.Post (NewState t)
+let fromClient t = agent.Post (NewClient t)

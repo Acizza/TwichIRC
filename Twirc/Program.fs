@@ -2,8 +2,9 @@
 
 open System
 open System.IO
-open Display
+open Result
 open Message
+open Display
 
 [<Literal>]
 let serverIP = "irc.twitch.tv"
@@ -11,27 +12,20 @@ let serverIP = "irc.twitch.tv"
 [<Literal>]
 let serverPort = 6667
 
-let initialize username password =
-    let uplink = DataLink.create serverIP serverPort
+let createUplink() = DataLink.create serverIP serverPort
 
-    match uplink with
-    | DataLink.Success x ->
-        x |> Client.sendLogin username password
-        DataLink.sendLine x "CAP REQ :twitch.tv/membership"
-        Some x
-    | DataLink.Failure msg ->
-        printErrorStatus "Unable to connect to server" msg
-        None
+let login username password (client:Client.State) =
+    client.dataLink |> Client.sendLogin username password
+    DataLink.sendLine client.dataLink "CAP REQ :twitch.tv/membership"
 
-let getInitialState channels uplink =
-    let state =
-        {Client.State.Zero with dataLink = uplink}
+    Success client
 
+let joinChannels channels (client:Client.State) =
     let newState =
         channels
-        |> List.fold Client.joinChannel state
+        |> List.fold Client.joinChannel client
 
-    Some newState
+    Success newState
 
 let startProcessing (state:Client.State) =
     let rec processServer link = async {
@@ -54,17 +48,31 @@ let startProcessing (state:Client.State) =
     processConsole()
 
 let run username oauth channels =
-    let (>>=) s f = Option.bind f s
+    let (>>=) s f =
+        match s with
+        | Success x -> f x
+        | Failure msg -> Failure msg
 
-    let uploadState s =
-        Dispatch.fromState s
-        Some s
+    let createClient uplink =
+        Success (Client.createFromUplink uplink)
 
-    initialize username oauth
-    >>= getInitialState channels
-    >>= uploadState
+    let uploadClient s =
+        Dispatch.fromClient s
+        Success s
+
+    let printErrors =
+        function
+        | Success _ -> ()
+        | Failure msg ->
+            printErrorStatus "Error initializing" msg
+
+    createUplink()
+    >>= createClient
+    >>= login username oauth
+    >>= joinChannels channels
+    >>= uploadClient
     >>= startProcessing
-    |> ignore
+    |> printErrors
 
 [<EntryPoint>]
 let main args =
