@@ -80,15 +80,17 @@ let main args =
     | username::oauth::channels ->
         run username oauth channels
     | channels ->
-        let (|ValidFile|) (s:Settings.Settings option) =
-            match s with
-            | Some x
-                when x.username <> "" && x.password <> "" ->
-                    Some x
-            | _ -> None
-
         match Settings.readDefault() with
-        | ValidFile (Some x) -> run x.username x.password (channels |> List.append x.joinChannels)
-        | _ -> printfn "Usage: <username> <oauth> |channels|"
+        | Some x ->
+            match x.username, x.password with
+            | "",_ ->
+                printError "Username not provided for auto-login"
+            | _,"" ->
+                printError "Password not provided for auto-login"
+            | _ ->
+                let jc = channels |> List.append x.joinChannels
+                run x.username x.password jc
+        | _ ->
+            printfn "Usage: <username> <oauth> |channels|"
 
     0
