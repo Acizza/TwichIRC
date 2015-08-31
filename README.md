@@ -25,7 +25,7 @@ username:<Twitch username>
 password:<Twitch oauth code>
 channels:<channels to join after login>
 ```
-Note that the channels setting is optional.
+Note that all settings are optional.
 
 If you don't like the default colors of the interface, you can change them. To replace a certain color, add this to your settings file:
 ```
