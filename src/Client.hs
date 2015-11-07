@@ -1,12 +1,15 @@
 module Client
 ( connect
 , login
+, joinChannel
+, leaveChannel
 ) where
 
 import Control.Exception (finally)
 import Network
 import System.IO
 import Text.Printf (printf)
+import Message (Channel, Username)
 
 connect :: HostName -> PortNumber -> IO Handle
 connect hostname port = withSocketsDo $ do
@@ -15,7 +18,6 @@ connect hostname port = withSocketsDo $ do
     hSetBuffering handle LineBuffering
     return handle
 
-type Username = String
 type Oauth = String
 
 login :: Username -> Oauth -> Handle -> IO Handle
@@ -24,3 +26,11 @@ login username oauth h = do
     hPutStrLn h $ "PASS " ++ oauth
     hPutStrLn h $ "NICK " ++ username
     return h
+
+joinChannel :: Channel -> Handle -> IO Handle
+joinChannel channel h = do
+    hPutStrLn h $ "JOIN #" ++ channel
+    return h
+
+leaveChannel :: Channel -> Handle -> IO ()
+leaveChannel channel h = hPutStrLn h $ "PART #" ++ channel
