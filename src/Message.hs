@@ -23,15 +23,17 @@ data Message =
     | otherwise          = Just $ list !! idx
 
 parse :: String -> Maybe Message
-parse str =
+-- Skip colon at the start of messages to avoid matching it later
+parse (_:str) =
     code >>= \c ->
         case c of
             "JOIN"    -> Just $ Join channel username
             "PART"    -> Just $ Leave channel username
-            "PRIVMSG" -> Just $ Message channel username "Testing"
+            "PRIVMSG" -> Just $ Message channel username (drop 1 $ dropWhile (/=':') str)
             _ -> Nothing
     where
         sections = words str
         code = sections !!! 1
-        username = maybe "ERROR" (takeWhile (/='!') . drop 1) (sections !!! 0)
+        username = maybe "ERROR" (takeWhile (/='!')) (sections !!! 0)
         channel = maybe "ERROR" (drop 1) (sections !!! 2)
+parse _ = Nothing
