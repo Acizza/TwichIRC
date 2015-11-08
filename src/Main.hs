@@ -4,14 +4,22 @@ import Client
 import Control.Exception (bracket)
 import Control.Monad (forever, unless)
 import System.IO
-import qualified Message as M
+import Message
+
+preprocessLine :: Maybe Message -> Handle -> IO ()
+preprocessLine (Just (Ping content)) h = hPutStrLn h $ "PONG " ++ content
+preprocessLine _ _ = return ()
 
 processNetworkLoop :: Handle -> IO ()
 processNetworkLoop handle = do
     eof <- hIsEOF handle
     unless eof $ do
         line <- hGetLine handle
-        unless (null line) $ print (M.parse line)
+        unless (null line) $ do
+            let result = parse line
+            preprocessLine result handle
+            print result
+
         processNetworkLoop handle
 
 main :: IO ()
