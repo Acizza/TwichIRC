@@ -25,6 +25,7 @@ login username oauth h = do
     hPutStrLn h $ printf "USER %s 0 * :%s" username username
     hPutStrLn h $ "PASS " ++ oauth
     hPutStrLn h $ "NICK " ++ username
+    hPutStrLn h "CAP REQ :twitch.tv/membership"
     return h
 
 joinChannel :: Channel -> Handle -> IO Handle
