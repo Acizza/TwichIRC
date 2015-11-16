@@ -12,6 +12,7 @@ import Control.Exception (finally)
 import Control.Monad (unless)
 import System.IO
 import Text.Printf (printf)
+import Client.Display (printCC)
 import Client.Message (Channel, Username, Message(..))
 import Network (HostName, PortNumber, PortID(..), connectTo, withSocketsDo)
 
@@ -50,4 +51,4 @@ process s (Ping content) = hPutStrLn (connection s) $ "PONG " ++ content
 process s msg = do
     let str = show msg
     unless (null str) $
-        putStrLn str
+        printCC str

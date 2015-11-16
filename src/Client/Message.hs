@@ -10,6 +10,7 @@ import Data.Maybe (maybe)
 import Data.List.Split (splitOn)
 import Text.Printf (printf)
 import System.IO (hPutStrLn, Handle)
+import System.Console.ANSI
 
 type Channel = String
 type Username = String
@@ -26,12 +27,12 @@ data Message =
     Login Result
 
 instance Show Message where
-    show (Message ch uname msg)  = printf "<%s> %s: %s" ch uname msg
-    show (Join ch uname)         = printf "<%s> %s joined" ch uname
-    show (Leave ch uname)        = printf "<%s> %s left" ch uname
+    show (Message ch uname msg)  = printf "~g~<%s> ~c~%s~w~||: %s" ch uname msg
+    show (Join ch uname)         = printf "~g~<%s> ~c~%s ~m~||joined" ch uname
+    show (Leave ch uname)        = printf "~g~<%s> ~c~%s ~m~||left" ch uname
     show (Ping _)                = ""
-    show (Login (Success uname)) = printf "Logged in as %s" uname
-    show (Login (Failure rsn))   = printf "Login failed: %s" rsn
+    show (Login (Success uname)) = printf "~w~Logged in as ~m~||%s" uname
+    show (Login (Failure rsn))   = printf "~r~Login failed: ~m~||%s" rsn
 
 -- Safe version of !!
 (!!!) :: [a] -> Int -> Maybe a
