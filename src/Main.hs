@@ -17,11 +17,12 @@ processNetwork us handle = do
         unless (null line) $ putMVar us (IRC line)
         processNetwork us handle
 
-initClient :: Handle -> UpdateSource -> Username -> I.Oauth -> IO ()
-initClient h var username oauth =
-    I.login username oauth h
-        >>= I.joinChannel ""
-        >>= processNetwork var
+initClient :: UpdateSource -> I.State -> Username -> I.Oauth -> IO I.State
+initClient us state username oauth = do
+    h <- I.login username oauth (I.connection state)
+    s <- I.joinChannel "" state
+    forkIO $ processNetwork us h
+    return s
 
 processConsole :: UpdateSource -> IO ()
 processConsole us = do
@@ -31,8 +32,13 @@ processConsole us = do
 
 main :: IO ()
 main = do
-    state <- newEmptyMVar
+    us <- newEmptyMVar
     bracket (I.connect "irc.twitch.tv" 6667) hClose $ \h -> do
-        forkIO $ process state $ I.State h []
-        forkIO $ initClient h state "" ""
-        processConsole state
+        state <-
+            let iniState = I.State {
+                I.connection = h,
+                I.channels   = []
+            }
+            in initClient us iniState "" ""
+        forkIO $ process us state
+        processConsole us

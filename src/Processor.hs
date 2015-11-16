@@ -17,12 +17,15 @@ type UpdateSource = MVar ProcessType
 process :: UpdateSource -> I.State -> IO ()
 process us state = do
     type' <- takeMVar us
-    case type' of
-        IRC x ->
-            case parse x of
-                Just x' -> I.process state x'
-                Nothing -> return ()
-        Console x ->
-            putStrLn $ "Console: " ++ x
+    newS <-
+        case type' of
+            IRC x -> do
+                case parse x of
+                    Just x' -> I.process state x'
+                    Nothing -> return ()
+                return state
+            Console x -> do
+                putStrLn $ "Console: " ++ x
+                return state
 
-    process us state
+    process us newS

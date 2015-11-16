@@ -10,6 +10,7 @@ module Client.IRC
 
 import Control.Exception (finally)
 import Control.Monad (unless)
+import Data.List (delete)
 import Data.Time.Format (formatTime, defaultTimeLocale)
 import Data.Time.LocalTime (getZonedTime)
 import System.IO
@@ -20,7 +21,7 @@ import Network (HostName, PortNumber, PortID(..), connectTo, withSocketsDo)
 
 data State = State {
     connection :: Handle,
-    channels   :: [String]
+    channels   :: [Channel]
 } deriving (Show)
 
 connect :: HostName -> PortNumber -> IO Handle
@@ -40,13 +41,15 @@ login username oauth h = do
     hPutStrLn h "CAP REQ :twitch.tv/membership"
     return h
 
-joinChannel :: Channel -> Handle -> IO Handle
-joinChannel channel h = do
-    hPutStrLn h $ "JOIN #" ++ channel
-    return h
+joinChannel :: Channel -> State -> IO State
+joinChannel channel s = do
+    hPutStrLn (connection s) $ "JOIN #" ++ channel
+    return $ s { channels = channel : channels s }
 
-leaveChannel :: Channel -> Handle -> IO ()
-leaveChannel channel h = hPutStrLn h $ "PART #" ++ channel
+leaveChannel :: Channel -> State -> IO State
+leaveChannel channel s = do
+    hPutStrLn (connection s) $ "PART #" ++ channel
+    return $ s { channels = delete channel $ channels s }
 
 process :: State -> Message -> IO ()
 process s (Ping content) = hPutStrLn (connection s) $ "PONG " ++ content
