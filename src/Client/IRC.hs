@@ -10,6 +10,8 @@ module Client.IRC
 
 import Control.Exception (finally)
 import Control.Monad (unless)
+import Data.Time.Format (formatTime, defaultTimeLocale)
+import Data.Time.LocalTime (getZonedTime)
 import System.IO
 import Text.Printf (printf)
 import Client.Display (printCC)
@@ -50,5 +52,7 @@ process :: State -> Message -> IO ()
 process s (Ping content) = hPutStrLn (connection s) $ "PONG " ++ content
 process s msg = do
     let str = show msg
-    unless (null str) $
-        printCC str
+    unless (null str) $ do
+        curTime <- getZonedTime
+        let timeStr = formatTime defaultTimeLocale "[%I:%M:%S]" curTime
+        printCC $ printf "~w~%s %s" timeStr str
