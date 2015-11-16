@@ -1,4 +1,4 @@
-module IRC
+module Client.IRC
 ( State(..)
 , connect
 , Oauth
@@ -9,10 +9,10 @@ module IRC
 ) where
 
 import Control.Exception (finally)
-import Network
 import System.IO
 import Text.Printf (printf)
-import Message (Channel, Username, Message(..))
+import Client.Message (Channel, Username, Message(..))
+import Network (HostName, PortNumber, PortID(..), connectTo, withSocketsDo)
 
 data State = State {
     connection :: Handle,

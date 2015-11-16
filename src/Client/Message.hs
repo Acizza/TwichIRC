@@ -1,4 +1,4 @@
-module Message
+module Client.Message
 ( Channel
 , Username
 , Result(..)
@@ -6,7 +6,6 @@ module Message
 , parse
 ) where
 
-import Control.Monad (unless)
 import Data.Maybe (maybe)
 import Data.List.Split (splitOn)
 import System.IO (hPutStrLn, Handle)

@@ -5,8 +5,8 @@ module Processor
 ) where
 
 import Control.Concurrent.MVar (MVar, takeMVar)
-import Message (parse, Message(..))
-import qualified IRC as I (State, process)
+import Client.Message (parse, Message(..))
+import qualified Client.IRC as I (State, process)
 
 data ProcessType =
     IRC String |

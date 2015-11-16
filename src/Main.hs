@@ -1,28 +1,26 @@
 module Main where
 
 import Control.Concurrent (forkIO)
-import Control.Concurrent.MVar
+import Control.Concurrent.MVar (putMVar, newEmptyMVar)
 import Control.Exception (bracket)
 import Control.Monad (forever, unless)
 import System.IO
-import Message (Message(..), Username)
+import Client.Message (Message(..), Username)
 import Processor (ProcessType(..), UpdateSource, process)
-import qualified IRC as I
+import qualified Client.IRC as I
 
 processNetwork :: UpdateSource -> Handle -> IO ()
 processNetwork us handle = do
     eof <- hIsEOF handle
     unless eof $ do
         line <- hGetLine handle
-        unless (null line) $
-            putMVar us (IRC line)
-
+        unless (null line) $ putMVar us (IRC line)
         processNetwork us handle
 
 initClient :: Handle -> UpdateSource -> Username -> I.Oauth -> IO ()
 initClient h var username oauth =
     I.login username oauth h
-        >>= I.joinChannel "witwix"
+        >>= I.joinChannel ""
         >>= processNetwork var
 
 processConsole :: UpdateSource -> IO ()
