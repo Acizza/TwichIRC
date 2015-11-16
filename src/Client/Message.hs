@@ -27,7 +27,9 @@ data Message =
     Login Result
 
 instance Show Message where
-    show (Message ch uname msg)  = printf "~g~<%s> ~c~%s~w~||: %s" ch uname msg
+    show (Message ch uname msg)
+        | ch == uname = printf "~w~[B] ~g~<%s> ~c~%s~w~||: %s" ch uname msg
+        | otherwise   = printf "~g~<%s> ~c~%s~w~||: %s" ch uname msg
     show (Join ch uname)         = printf "~g~<%s> ~c~%s ~m~||joined" ch uname
     show (Leave ch uname)        = printf "~g~<%s> ~c~%s ~m~||left" ch uname
     show (Ping _)                = ""
