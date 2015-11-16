@@ -1,15 +1,23 @@
-module Client
-( connect
+module IRC
+( State(..)
+, connect
+, Oauth
 , login
 , joinChannel
 , leaveChannel
+, process
 ) where
 
 import Control.Exception (finally)
 import Network
 import System.IO
 import Text.Printf (printf)
-import Message (Channel, Username)
+import Message (Channel, Username, Message(..))
+
+data State = State {
+    connection :: Handle,
+    channels   :: [String]
+} deriving (Show)
 
 connect :: HostName -> PortNumber -> IO Handle
 connect hostname port = withSocketsDo $ do
@@ -35,3 +43,8 @@ joinChannel channel h = do
 
 leaveChannel :: Channel -> Handle -> IO ()
 leaveChannel channel h = hPutStrLn h $ "PART #" ++ channel
+
+process :: State -> Message -> IO ()
+process s (Ping content) = hPutStrLn (connection s) $ "PONG " ++ content
+process s msg =
+    print msg
