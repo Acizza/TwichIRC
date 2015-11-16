@@ -9,6 +9,7 @@ module Client.IRC
 ) where
 
 import Control.Exception (finally)
+import Control.Monad (unless)
 import System.IO
 import Text.Printf (printf)
 import Client.Message (Channel, Username, Message(..))
@@ -46,5 +47,7 @@ leaveChannel channel h = hPutStrLn h $ "PART #" ++ channel
 
 process :: State -> Message -> IO ()
 process s (Ping content) = hPutStrLn (connection s) $ "PONG " ++ content
-process s msg =
-    print msg
+process s msg = do
+    let str = show msg
+    unless (null str) $
+        putStrLn str

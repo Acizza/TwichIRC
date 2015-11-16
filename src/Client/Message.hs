@@ -8,6 +8,7 @@ module Client.Message
 
 import Data.Maybe (maybe)
 import Data.List.Split (splitOn)
+import Text.Printf (printf)
 import System.IO (hPutStrLn, Handle)
 
 type Channel = String
@@ -23,7 +24,14 @@ data Message =
     Leave Channel Username |
     Ping String |
     Login Result
-    deriving (Show)
+
+instance Show Message where
+    show (Message ch uname msg)  = printf "<%s> %s: %s" ch uname msg
+    show (Join ch uname)         = printf "<%s> %s joined" ch uname
+    show (Leave ch uname)        = printf "<%s> %s left" ch uname
+    show (Ping _)                = ""
+    show (Login (Success uname)) = printf "Logged in as %s" uname
+    show (Login (Failure rsn))   = printf "Login failed: %s" rsn
 
 -- Safe version of !!
 (!!!) :: [a] -> Int -> Maybe a
