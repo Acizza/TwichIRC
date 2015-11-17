@@ -1,4 +1,4 @@
-module Client.IRC
+module IRC.Client
 ( State(..)
 , connect
 , Oauth
@@ -15,8 +15,8 @@ import Data.Time.Format (formatTime, defaultTimeLocale)
 import Data.Time.LocalTime (getZonedTime)
 import System.IO
 import Text.Printf (printf)
-import Client.Display (printCC)
-import Client.Message (Channel, Username, Message(..))
+import IRC.Display (printCC)
+import IRC.Message (Channel, Username, Message(..))
 import Network (HostName, PortNumber, PortID(..), connectTo, withSocketsDo)
 
 data State = State {

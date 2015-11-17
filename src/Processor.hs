@@ -5,8 +5,11 @@ module Processor
 ) where
 
 import Control.Concurrent.MVar (MVar, takeMVar)
-import Client.Message (parse, Message(..))
-import qualified Client.IRC as I (State, process)
+import Data.Maybe (fromMaybe)
+import IRC.Message (parse, Message(..))
+import IRC.Display (printCC)
+import qualified Command as C (process)
+import qualified IRC.Client as I (State, process)
 
 data ProcessType =
     IRC String |
@@ -24,8 +27,11 @@ process us state = do
                     Just x' -> I.process state x'
                     Nothing -> return ()
                 return state
-            Console x -> do
-                putStrLn $ "Console: " ++ x
-                return state
+            Console x ->
+                case C.process state x of
+                    Left msg -> do
+                        printCC $ "~r~Error:~w~|| " ++ msg
+                        return state
+                    Right x' -> x'
 
     process us newS

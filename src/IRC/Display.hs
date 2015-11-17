@@ -1,4 +1,4 @@
-module Client.Display (printCC) where
+module IRC.Display (printCC) where
 
 import System.Console.ANSI
 

@@ -1,4 +1,4 @@
-module Client.Message
+module IRC.Message
 ( Channel
 , Username
 , Result(..)
@@ -51,7 +51,7 @@ parse :: String -> Maybe Message
 parse str =
     code >>= \c ->
         case c of
-            "PRIVMSG" -> Just $ Message channel username (drop 1 . dropWhile (/=':') . drop 1 $ str)
+            "PRIVMSG" -> Just $ Message channel username (tail . dropWhile (/=':') . tail $ str)
             "JOIN"    -> Just $ Join channel username
             "PART"    -> Just $ Leave channel username
             "PING"    -> Just $ Ping $ drop (length "PING ") str
@@ -61,5 +61,5 @@ parse str =
     where
         sections = words str
         code = getCode sections
-        username = maybe "ERROR" (drop 1 . takeWhile (/='!')) (sections !!! 0)
-        channel = maybe "ERROR" (drop 1) (sections !!! 2)
+        username = maybe "ERROR" (tail . takeWhile (/='!')) (sections !!! 0)
+        channel = maybe "ERROR" tail (sections !!! 2)

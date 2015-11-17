@@ -5,9 +5,9 @@ import Control.Concurrent.MVar (putMVar, newEmptyMVar)
 import Control.Exception (bracket)
 import Control.Monad (forever, unless)
 import System.IO
-import Client.Message (Message(..), Username)
+import IRC.Message (Message(..), Username)
 import Processor (ProcessType(..), UpdateSource, process)
-import qualified Client.IRC as I
+import qualified IRC.Client as I
 
 processNetwork :: UpdateSource -> Handle -> IO ()
 processNetwork us handle = do
