@@ -27,4 +27,4 @@ executable twirc
         base >=4.8 && <4.9
   hs-source-dirs:      src
   default-language:    Haskell2010
-  ghc-options:         -O2 -fwarn-incomplete-patterns
+  ghc-options:         -O2 -Wall

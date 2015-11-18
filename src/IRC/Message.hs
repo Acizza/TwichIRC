@@ -6,11 +6,8 @@ module IRC.Message
 , parse
 ) where
 
-import Data.Maybe (maybe)
 import Data.List.Split (splitOn)
 import Text.Printf (printf)
-import System.IO (hPutStrLn, Handle)
-import System.Console.ANSI
 
 type Channel = String
 type Username = String

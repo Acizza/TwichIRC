@@ -3,9 +3,9 @@ module Main where
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar (putMVar, newEmptyMVar)
 import Control.Exception (bracket)
-import Control.Monad (forever, unless)
+import Control.Monad (unless)
 import System.IO
-import IRC.Message (Message(..), Username)
+import IRC.Message (Username)
 import Processor (ProcessType(..), UpdateSource, process)
 import qualified IRC.Client as I
 
@@ -21,7 +21,7 @@ initClient :: UpdateSource -> I.State -> Username -> I.Oauth -> IO I.State
 initClient us state username oauth = do
     h <- I.login username oauth (I.connection state)
     s <- I.joinChannel "" state
-    forkIO $ processNetwork us h
+    _ <- ($) forkIO $ processNetwork us h
     return s
 
 processConsole :: UpdateSource -> IO ()
@@ -41,5 +41,5 @@ main = do
                 I.moderators = []
             }
             in initClient us iniState "" ""
-        forkIO $ process us state
+        _ <- ($) forkIO $ process us state
         processConsole us

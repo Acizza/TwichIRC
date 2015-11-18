@@ -25,14 +25,19 @@ commands = [
 
 -- Start of command implementations
 
+joinCmd :: Action
 joinCmd = foldM (flip joinChannel)
+
+leaveCmd :: Action
 leaveCmd = foldM (flip leaveChannel)
 
+sendCmd :: Action
 sendCmd s (chan:msg) = do
     sendMessage chan (unwords msg) s
     return s
 sendCmd s _ = return s
 
+modsCmd :: Action
 modsCmd s (chan:_) = do
     mapM_ ((\x -> printCC $ "~r~" ++ x ++ "\n") . snd)
         $ filter (\x -> fst x == chan)
@@ -40,11 +45,13 @@ modsCmd s (chan:_) = do
     return s
 modsCmd s _ = return s
 
+channelsCmd :: Action
 channelsCmd s _ = do
     mapM_ (\x -> printCC $ "~r~" ++ x ++ "\n")
         $ channels s
     return s
 
+leaveallCmd :: Action
 leaveallCmd s _ = foldM (flip leaveChannel) s $ channels s
 
 -- End of command implementations
@@ -70,7 +77,7 @@ executeCommand name args state =
 process :: State -> String -> Either String (IO State)
 process state = match . words
     where
-        match ("commands":args) =
+        match ("commands":_) =
             Right $ do
                 printCommands
                 return state

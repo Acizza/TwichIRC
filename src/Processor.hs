@@ -5,8 +5,7 @@ module Processor
 ) where
 
 import Control.Concurrent.MVar (MVar, takeMVar)
-import Data.Maybe (fromMaybe)
-import IRC.Message (parse, Message(..))
+import IRC.Message (parse)
 import IRC.Display (printCC)
 import qualified Command as C (process)
 import qualified IRC.Client as I (State, process)

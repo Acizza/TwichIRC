@@ -9,7 +9,6 @@ module IRC.Client
 , process
 ) where
 
-import Control.Exception (finally)
 import Control.Monad (unless)
 import Data.List (delete)
 import Data.Time.Format (formatTime, defaultTimeLocale)
@@ -59,7 +58,7 @@ sendMessage channel msg s =
 
 process :: State -> Message -> IO ()
 process s (Ping content) = hPutStrLn (connection s) $ "PONG " ++ content
-process s msg = do
+process _ msg = do
     let str = show msg
     unless (null str) $ do
         curTime <- getZonedTime
