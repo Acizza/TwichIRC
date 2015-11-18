@@ -5,6 +5,7 @@ module IRC.Client
 , login
 , joinChannel
 , leaveChannel
+, sendMessage
 , process
 ) where
 
@@ -21,7 +22,8 @@ import Network (HostName, PortNumber, PortID(..), connectTo, withSocketsDo)
 
 data State = State {
     connection :: Handle,
-    channels   :: [Channel]
+    channels   :: [Channel],
+    moderators :: [(Channel, String)]
 } deriving (Show)
 
 connect :: HostName -> PortNumber -> IO Handle
@@ -50,6 +52,10 @@ leaveChannel :: Channel -> State -> IO State
 leaveChannel channel s = do
     hPutStrLn (connection s) $ "PART #" ++ channel
     return $ s { channels = delete channel $ channels s }
+
+sendMessage :: Channel -> String -> State -> IO ()
+sendMessage channel msg s =
+    hPutStrLn (connection s) $ printf "PRIVMSG #%s :%s" channel msg
 
 process :: State -> Message -> IO ()
 process s (Ping content) = hPutStrLn (connection s) $ "PONG " ++ content

@@ -4,7 +4,7 @@ import Control.Monad (foldM)
 import Data.List (find)
 import Text.Printf (printf)
 import IRC.Display (printCC)
-import IRC.Client (State, joinChannel, leaveChannel)
+import IRC.Client (State(..), joinChannel, leaveChannel, sendMessage)
 
 type Name = String
 type Usage = String
@@ -17,10 +17,37 @@ type Command = (Name, Usage, NumArgs, Action)
 commands :: [Command]
 commands = [
     ("join", "<channels>", 1, joinCmd),
-    ("leave", "<channels>", 1, leaveCmd)]
+    ("leave", "<channels>", 1, leaveCmd),
+    ("send", "<channel> <message>", 2, sendCmd),
+    ("mods", "<channel>", 1, modsCmd),
+    ("channels", "", 0, channelsCmd),
+    ("leaveall", "", 0, leaveallCmd)]
+
+-- Start of command implementations
 
 joinCmd = foldM (flip joinChannel)
 leaveCmd = foldM (flip leaveChannel)
+
+sendCmd s (chan:msg) = do
+    sendMessage chan (unwords msg) s
+    return s
+sendCmd s _ = return s
+
+modsCmd s (chan:_) = do
+    mapM_ ((\x -> printCC $ "~r~" ++ x ++ "\n") . snd)
+        $ filter (\x -> fst x == chan)
+        $ moderators s
+    return s
+modsCmd s _ = return s
+
+channelsCmd s _ = do
+    mapM_ (\x -> printCC $ "~r~" ++ x ++ "\n")
+        $ channels s
+    return s
+
+leaveallCmd s _ = foldM (flip leaveChannel) s $ channels s
+
+-- End of command implementations
 
 printCommands :: IO ()
 printCommands =

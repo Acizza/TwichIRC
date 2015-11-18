@@ -37,7 +37,8 @@ main = do
         state <-
             let iniState = I.State {
                 I.connection = h,
-                I.channels   = []
+                I.channels   = [],
+                I.moderators = []
             }
             in initClient us iniState "" ""
         forkIO $ process us state
