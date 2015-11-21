@@ -1,28 +1,44 @@
 module Main where
 
+import System.IO
+import IRC.IRC
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar (putMVar, newEmptyMVar)
 import Control.Exception (bracket)
 import Control.Monad (unless)
-import System.IO
-import IRC.Message (Username)
-import Processor (ProcessType(..), UpdateSource, process)
-import qualified IRC.Client as I
+import Processor (ProcessType(..), UpdateSource, handleIncoming)
+import qualified IRC.Message as Message (parse)
+import qualified IRC.Client as Client
+
+initClient :: Handle -> Username -> Oauth -> IO Client.State
+initClient conn username oauth = do
+    let state = Client.State {
+        Client.connection = conn,
+        Client.channels   = [],
+        Client.moderators = []
+    }
+    Client.login username oauth state
+    Client.joinChannel state ""
+
+startProcessing :: Client.State -> IO ()
+startProcessing state = do
+    updater <- newEmptyMVar
+    _ <- forkIO $ handleIncoming updater state
+    _ <- forkIO $ processNetwork updater (Client.connection state)
+    processConsole updater
 
 processNetwork :: UpdateSource -> Handle -> IO ()
 processNetwork us handle = do
     eof <- hIsEOF handle
-    unless eof $ do
+    op  <- hIsClosed handle
+    unless (eof || op) $ do
         line <- hGetLine handle
-        unless (null line) $ putMVar us (IRC line)
-        processNetwork us handle
+        unless (null line) $
+            case Message.parse line of
+                Just x -> putMVar us (IRC x)
+                Nothing -> return ()
 
-initClient :: UpdateSource -> I.State -> Username -> I.Oauth -> IO I.State
-initClient us state username oauth = do
-    h <- I.login username oauth (I.connection state)
-    s <- I.joinChannel "" state
-    _ <- ($) forkIO $ processNetwork us h
-    return s
+        processNetwork us handle
 
 processConsole :: UpdateSource -> IO ()
 processConsole us = do
@@ -31,15 +47,7 @@ processConsole us = do
     processConsole us
 
 main :: IO ()
-main = do
-    us <- newEmptyMVar
-    bracket (I.connect "irc.twitch.tv" 6667) hClose $ \h -> do
-        state <-
-            let iniState = I.State {
-                I.connection = h,
-                I.channels   = [],
-                I.moderators = []
-            }
-            in initClient us iniState "" ""
-        _ <- ($) forkIO $ process us state
-        processConsole us
+main =
+    bracket (Client.connect "irc.twitch.tv" 6667) hClose $ \h -> do
+        state <- initClient h "" ""
+        startProcessing state

@@ -26,10 +26,10 @@ commands = [
 -- Start of command implementations
 
 joinCmd :: Action
-joinCmd = foldM (flip joinChannel)
+joinCmd = foldM joinChannel
 
 leaveCmd :: Action
-leaveCmd = foldM (flip leaveChannel)
+leaveCmd = foldM leaveChannel
 
 sendCmd :: Action
 sendCmd s (chan:msg) = do
@@ -39,28 +39,39 @@ sendCmd s _ = return s
 
 modsCmd :: Action
 modsCmd s (chan:_) = do
-    mapM_ ((\x -> printCC $ "~r~" ++ x ++ "\n") . snd)
-        $ filter (\x -> fst x == chan)
-        $ moderators s
+    printCC $ printf "~r~%d~y~ moderators connected to ~r~||%s"
+        (length mods)
+        chan
+    mapM_ (\(i,x) -> printCC $ printf "~y~%d.~r~|| %s" i x) mods
     return s
+    where mods =
+            zip [(1::Int)..]
+            . map snd
+            . filter (\(c,_) -> c == chan) $ moderators s
 modsCmd s _ = return s
 
 channelsCmd :: Action
 channelsCmd s _ = do
-    mapM_ (\x -> printCC $ "~r~" ++ x ++ "\n")
-        $ channels s
+    printCC $ printf "~y~Connected to ~r~%d~y~|| channels"
+        (length channels')
+    mapM_ (\(i,x) -> printCC $ printf "~y~%d. ~r~||%s" i x) channels'
     return s
+    where channels' = zip [(1::Int)..] $ channels s
 
 leaveallCmd :: Action
-leaveallCmd s _ = foldM (flip leaveChannel) s $ channels s
+leaveallCmd s _ = foldM leaveChannel s $ channels s
 
 -- End of command implementations
 
 printCommands :: IO ()
-printCommands =
-    mapM_ (\(name, usage, _, _) ->
-        printCC $ printf "~r~%s: ~w~%s\n" name usage)
-        commands
+printCommands = do
+    printCC $ printf "~r~%d~y~|| commands" $ length commands'
+    mapM_ (\(i, (name, usage, _, _)) ->
+        if null usage
+            then printCC $ printf "~y~%d. ~r~||%s" i name
+            else printCC $ printf "~y~%d. ~r~%s: ~w~||%s" i name usage
+        ) commands'
+    where commands' = zip [(1::Int)..] commands
 
 findCommand :: Name -> Maybe Command
 findCommand name = find (\(n, _, _, _) -> n == name) commands
@@ -70,8 +81,8 @@ executeCommand name args state =
     case findCommand name of
         Just (_, usage, nArgs, f) ->
             if nArgs > length args
-            then Left $ printf $ "Usage: " ++ usage
-            else Right $ f state args
+                then Left $ printf $ "Usage: " ++ usage
+                else Right $ f state args
         Nothing -> Left $ "Command not found: " ++ name
 
 process :: State -> String -> Either String (IO State)

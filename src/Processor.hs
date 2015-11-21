@@ -1,36 +1,34 @@
 module Processor
 ( ProcessType(..)
 , UpdateSource
-, process
+, handleIncoming
 ) where
 
 import Control.Concurrent.MVar (MVar, takeMVar)
-import IRC.Message (parse)
+import IRC.Message (Message)
 import IRC.Display (printCC)
-import qualified Command as C (process)
-import qualified IRC.Client as I (State, process)
+import qualified Command (process)
+import qualified IRC.Client as Client (State, process)
 
 data ProcessType =
-    IRC String |
+    IRC Message |
     Console String
 
 type UpdateSource = MVar ProcessType
 
-process :: UpdateSource -> I.State -> IO ()
-process us state = do
+handleIncoming :: UpdateSource -> Client.State -> IO ()
+handleIncoming us state = do
     type' <- takeMVar us
-    newS <-
+    newState <-
         case type' of
             IRC x -> do
-                case parse x of
-                    Just x' -> I.process state x'
-                    Nothing -> return ()
+                Client.process state x
                 return state
             Console x ->
-                case C.process state x of
+                case Command.process state x of
+                    Right x' -> x'
                     Left msg -> do
                         printCC $ "~r~Error:~w~|| " ++ msg
                         return state
-                    Right x' -> x'
 
-    process us newS
+    handleIncoming us newState
