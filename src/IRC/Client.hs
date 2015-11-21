@@ -28,6 +28,7 @@ connect hostname port = withSocketsDo $ do
     handle <- connectTo hostname (PortNumber port)
     hSetNewlineMode handle universalNewlineMode
     hSetBuffering handle LineBuffering
+    hSetEncoding handle utf8
     return handle
 
 sendLine :: State -> String -> IO ()
