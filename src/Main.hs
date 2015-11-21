@@ -5,20 +5,22 @@ import IRC.IRC
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar (putMVar, newEmptyMVar)
 import Control.Exception (bracket)
-import Control.Monad (unless)
+import Control.Monad (unless, foldM)
+import System.Environment (getArgs)
 import Processor (ProcessType(..), UpdateSource, handleIncoming)
+import IRC.Display (printCC)
 import qualified IRC.Message as Message (parse)
 import qualified IRC.Client as Client
 
-initClient :: Handle -> Username -> Oauth -> IO Client.State
-initClient conn username oauth = do
+initClient :: Handle -> Username -> Oauth -> [Channel] -> IO Client.State
+initClient conn username oauth channels = do
     let state = Client.State {
         Client.connection = conn,
         Client.channels   = [],
         Client.moderators = []
     }
     Client.login username oauth state
-    Client.joinChannel state ""
+    foldM Client.joinChannel state channels
 
 startProcessing :: Client.State -> IO ()
 startProcessing state = do
@@ -47,7 +49,11 @@ processConsole us = do
     processConsole us
 
 main :: IO ()
-main =
-    bracket (Client.connect "irc.twitch.tv" 6667) hClose $ \h -> do
-        state <- initClient h "" ""
-        startProcessing state
+main = do
+    args <- getArgs
+    case args of
+        uname:oauth:channels ->
+            bracket (Client.connect "irc.twitch.tv" 6667) hClose $ \h -> do
+                state <- initClient h uname oauth channels
+                startProcessing state
+        _ -> printCC "~y~Usage~w~||: <username> <oauth key> [channels to join]"
