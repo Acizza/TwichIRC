@@ -14,7 +14,7 @@ import IRC.IRC
 import IRC.Display (printCC)
 import IRC.Message (Result(..), Message(..))
 import Network (HostName, PortNumber, PortID(..), connectTo, withSocketsDo)
-import Data.List (delete)
+import Data.List (delete, isPrefixOf)
 import Text.Printf (printf)
 import System.Console.ANSI (setTitle)
 
@@ -71,6 +71,9 @@ sendMessage channel msg s =
 
 display :: State -> Message -> String
 display s (Message ch uname msg)
+    | "\SOHACTION" `isPrefixOf` msg  =
+        printf "~g~<%s> ~r~%s ~y~||%s" ch uname
+            (init . drop (length "\SOHACTION ") $ msg)
     | uname == ch                    = printf "~g~<%s> ~y~[B] ~c~%s~w~||: %s" ch uname msg
     | (ch,uname) `elem` moderators s = printf "~g~<%s> ~y~[M] ~c~%s~w~||: %s" ch uname msg
     | uname == "twitchnotify"        = -- Subscriptions
