@@ -73,6 +73,9 @@ display :: State -> Message -> String
 display s (Message ch uname msg)
     | uname == ch                    = printf "~g~<%s> ~y~[B] ~c~%s~w~||: %s" ch uname msg
     | (ch,uname) `elem` moderators s = printf "~g~<%s> ~y~[M] ~c~%s~w~||: %s" ch uname msg
+    | uname == "twitchnotify"        = -- Subscriptions
+        let (user,msg') = span (/=' ') msg
+        in printf "~g~<%s> ~r~%s ~y~||%s" ch user (tail msg')
     | otherwise                      = printf "~g~<%s> ~c~%s~w~||: %s" ch uname msg
 display _ (Join ch uname)            = printf "~g~<%s> ~c~%s ~y~||joined" ch uname
 display _ (Leave ch uname)           = printf "~g~<%s> ~c~%s ~y~||left" ch uname
