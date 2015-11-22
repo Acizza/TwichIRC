@@ -16,12 +16,18 @@ import Network (HostName, PortNumber, PortID(..), connectTo, withSocketsDo)
 import Control.Monad (unless)
 import Data.List (delete)
 import Text.Printf (printf)
+import System.Console.ANSI (setTitle)
 
 data State = State {
     connection :: Handle,
     channels   :: [Channel],
     moderators :: [(Channel, String)]
 } deriving (Show)
+
+updateTitle :: State -> IO ()
+updateTitle state =
+    setTitle $ printf "Twirc (%d)" nChannels
+    where nChannels = length (channels state)
 
 connect :: HostName -> PortNumber -> IO Handle
 connect hostname port = withSocketsDo $ do
@@ -44,12 +50,16 @@ login username oauth s = do
 joinChannel :: State -> Channel -> IO State
 joinChannel state channel = do
     sendLine state $ "JOIN #" ++ channel
-    return $ state { channels = channel : channels state }
+    let next = state { channels = channel:channels state }
+    updateTitle next
+    return next
 
 leaveChannel :: State -> Channel -> IO State
 leaveChannel state channel = do
     sendLine state $ "PART #" ++ channel
-    return $ state { channels = delete channel $ channels state }
+    let next = state { channels = delete channel $ channels state }
+    updateTitle next
+    return next
 
 sendMessage :: Channel -> String -> State -> IO ()
 sendMessage channel msg s =
