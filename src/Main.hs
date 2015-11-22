@@ -19,6 +19,7 @@ initClient conn username oauth channels = do
         Client.channels   = [],
         Client.moderators = []
     }
+    Client.updateTitle state
     Client.login username oauth state
     foldM Client.joinChannel state channels
 

@@ -1,5 +1,6 @@
 module IRC.Client
 ( State(..)
+, updateTitle
 , connect
 , login
 , joinChannel
