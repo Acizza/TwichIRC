@@ -12,9 +12,8 @@ module IRC.Client
 import System.IO
 import IRC.IRC
 import IRC.Display (printCC)
-import IRC.Message (Message(..))
+import IRC.Message (Result(..), Message(..))
 import Network (HostName, PortNumber, PortID(..), connectTo, withSocketsDo)
-import Control.Monad (unless)
 import Data.List (delete)
 import Text.Printf (printf)
 import System.Console.ANSI (setTitle)
@@ -23,7 +22,7 @@ data State = State {
     connection :: Handle,
     channels   :: [Channel],
     moderators :: [(Channel, String)]
-} deriving (Show)
+}
 
 updateTitle :: State -> IO ()
 updateTitle state =
@@ -67,8 +66,12 @@ sendMessage channel msg s =
     sendLine s $ printf "PRIVMSG #%s :%s" channel msg
 
 process :: State -> Message -> IO ()
-process s (Ping content) =
-    sendLine s $ "PONG " ++ content
-process _ msg = do
-    let str = show msg
-    unless (null str) $ printCC str
+process s (Message ch uname msg)
+    | uname == ch                    = printCC $ printf "~w~[B] ~g~<%s> ~c~%s~w~||: %s" ch uname msg
+    | (ch,uname) `elem` moderators s = printCC $ printf "[M] ~g~<%s> ~c~%s~w~||: %s" ch uname msg
+    | otherwise                      = printCC $ printf "~g~<%s> ~c~%s~w~||: %s" ch uname msg
+process _ (Join ch uname)            = printCC $ printf "~g~<%s> ~c~%s ~m~||joined" ch uname
+process _ (Leave ch uname)           = printCC $ printf "~g~<%s> ~c~%s ~m~||left" ch uname
+process s (Ping content)             = sendLine s $ "PONG " ++ content
+process _ (Login (Success uname))    = printCC $ printf "~g~Logged in as ~c~||%s" uname
+process _ (Login (Failure rsn))      = printCC $ printf "~r~Login failed: ~w~||%s" rsn

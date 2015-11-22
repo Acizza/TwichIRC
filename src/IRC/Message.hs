@@ -6,7 +6,6 @@ module IRC.Message
 
 import IRC.IRC
 import Data.List.Split (splitOn)
-import Text.Printf (printf)
 
 type Reason = String
 
@@ -19,16 +18,6 @@ data Message =
     Leave Channel Username |
     Ping String |
     Login Result
-
-instance Show Message where
-    show (Message ch uname msg)
-        | ch == uname            = printf "~w~[B] ~g~<%s> ~c~%s~w~||: %s" ch uname msg
-        | otherwise              = printf "~g~<%s> ~c~%s~w~||: %s" ch uname msg
-    show (Join ch uname)         = printf "~g~<%s> ~c~%s ~m~||joined" ch uname
-    show (Leave ch uname)        = printf "~g~<%s> ~c~%s ~m~||left" ch uname
-    show (Ping _)                = ""
-    show (Login (Success uname)) = printf "~g~Logged in as ~c~||%s" uname
-    show (Login (Failure rsn))   = printf "~r~Login failed: ~w~||%s" rsn
 
 -- Safe version of !!
 (!!!) :: [a] -> Int -> Maybe a
