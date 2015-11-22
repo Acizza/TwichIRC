@@ -71,11 +71,11 @@ sendMessage channel msg s =
 
 display :: State -> Message -> String
 display s (Message ch uname msg)
-    | uname == ch                    = printf "~g~<%s> ~w~[B] ~c~%s~w~||: %s" ch uname msg
-    | (ch,uname) `elem` moderators s = printf "~g~<%s> ~w~[M] ~c~%s~w~||: %s" ch uname msg
+    | uname == ch                    = printf "~g~<%s> ~y~[B] ~c~%s~w~||: %s" ch uname msg
+    | (ch,uname) `elem` moderators s = printf "~g~<%s> ~y~[M] ~c~%s~w~||: %s" ch uname msg
     | otherwise                      = printf "~g~<%s> ~c~%s~w~||: %s" ch uname msg
-display _ (Join ch uname)            = printf "~g~<%s> ~c~%s ~m~||joined" ch uname
-display _ (Leave ch uname)           = printf "~g~<%s> ~c~%s ~m~||left" ch uname
+display _ (Join ch uname)            = printf "~g~<%s> ~c~%s ~y~||joined" ch uname
+display _ (Leave ch uname)           = printf "~g~<%s> ~c~%s ~y~||left" ch uname
 display _ (ModeratorJoin ch uname)   = printf "~g~<%s> ~y~Moderator ~r~%s ~y~||joined" ch uname
 display _ (ModeratorLeave ch uname)  = printf "~g~<%s> ~y~Moderator ~r~%s ~y~||left" ch uname
 display _ (Ping _)                   = ""
