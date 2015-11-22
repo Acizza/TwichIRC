@@ -16,6 +16,8 @@ data Message =
     Message Channel Username String |
     Join Channel Username |
     Leave Channel Username |
+    ModeratorJoin Channel Username |
+    ModeratorLeave Channel Username |
     Ping String |
     Login Result
 
@@ -36,6 +38,11 @@ parse str =
         "PRIVMSG" -> Just $ Message channel username (tail . dropWhile (/=':') . tail $ str)
         "JOIN"    -> Just $ Join channel username
         "PART"    -> Just $ Leave channel username
+        "MODE"    ->
+            case sections !! 3 of
+                '+':_ -> Just $ ModeratorJoin channel (sections !! 4)
+                '-':_ -> Just $ ModeratorLeave channel (sections !! 4)
+                _     -> Nothing
         "PING"    -> Just $ Ping $ drop (length "PING ") str
         "004"     -> Just $ Login (Success $ sections !! 2)
         "NOTICE"  -> Just $ Login (Failure $ splitOn " :" str !! 1)

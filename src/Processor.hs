@@ -21,9 +21,7 @@ handleIncoming us state = do
     type' <- takeMVar us
     newState <-
         case type' of
-            IRC x -> do
-                Client.process state x
-                return state
+            IRC x -> Client.process state x
             Console x ->
                 case Command.process state x of
                     Right x' -> x'

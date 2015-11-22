@@ -57,7 +57,11 @@ joinChannel state channel = do
 leaveChannel :: State -> Channel -> IO State
 leaveChannel state channel = do
     sendLine state $ "PART #" ++ channel
-    let next = state { channels = delete channel $ channels state }
+    let next = state {
+        channels = delete channel $ channels state
+    } {
+        moderators = filter (\(c,_) -> c /= channel) $ moderators state
+    }
     updateTitle next
     return next
 
@@ -65,13 +69,29 @@ sendMessage :: Channel -> String -> State -> IO ()
 sendMessage channel msg s =
     sendLine s $ printf "PRIVMSG #%s :%s" channel msg
 
-process :: State -> Message -> IO ()
-process s (Message ch uname msg)
-    | uname == ch                    = printCC $ printf "~w~[B] ~g~<%s> ~c~%s~w~||: %s" ch uname msg
-    | (ch,uname) `elem` moderators s = printCC $ printf "[M] ~g~<%s> ~c~%s~w~||: %s" ch uname msg
-    | otherwise                      = printCC $ printf "~g~<%s> ~c~%s~w~||: %s" ch uname msg
-process _ (Join ch uname)            = printCC $ printf "~g~<%s> ~c~%s ~m~||joined" ch uname
-process _ (Leave ch uname)           = printCC $ printf "~g~<%s> ~c~%s ~m~||left" ch uname
-process s (Ping content)             = sendLine s $ "PONG " ++ content
-process _ (Login (Success uname))    = printCC $ printf "~g~Logged in as ~c~||%s" uname
-process _ (Login (Failure rsn))      = printCC $ printf "~r~Login failed: ~w~||%s" rsn
+display :: State -> Message -> String
+display s (Message ch uname msg)
+    | uname == ch                    = printf "~g~<%s> ~w~[B] ~c~%s~w~||: %s" ch uname msg
+    | (ch,uname) `elem` moderators s = printf "~g~<%s> ~w~[M] ~c~%s~w~||: %s" ch uname msg
+    | otherwise                      = printf "~g~<%s> ~c~%s~w~||: %s" ch uname msg
+display _ (Join ch uname)            = printf "~g~<%s> ~c~%s ~m~||joined" ch uname
+display _ (Leave ch uname)           = printf "~g~<%s> ~c~%s ~m~||left" ch uname
+display _ (ModeratorJoin ch uname)   = printf "~g~<%s> ~y~Moderator ~r~%s ~y~||joined" ch uname
+display _ (ModeratorLeave ch uname)  = printf "~g~<%s> ~y~Moderator ~r~%s ~y~||left" ch uname
+display _ (Ping _)                   = ""
+display _ (Login (Success uname))    = printf "~g~Logged in as ~c~||%s" uname
+display _ (Login (Failure rsn))      = printf "~r~Login failed: ~w~||%s" rsn
+
+process :: State -> Message -> IO State
+process s m@(ModeratorJoin ch uname) = do
+    printCC $ display s m
+    return $ s { moderators = (ch,uname):moderators s }
+process s m@(ModeratorLeave ch uname) = do
+    printCC $ display s m
+    return $ s { moderators = delete (ch,uname) $ moderators s}
+process s (Ping content) = do
+    sendLine s $ "PONG " ++ content
+    return s
+process s m = do
+    printCC $ display s m
+    return s
