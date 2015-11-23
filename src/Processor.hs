@@ -8,7 +8,7 @@ import Control.Concurrent.MVar (MVar, takeMVar)
 import IRC.Message (Message)
 import IRC.Display (printCC)
 import qualified Command (process)
-import qualified IRC.Client as Client (State, process)
+import qualified IRC.Client as Client (State(..), process)
 
 data ProcessType =
     IRC Message |
@@ -26,7 +26,7 @@ handleIncoming us state = do
                 case Command.process state x of
                     Right x' -> x'
                     Left msg -> do
-                        printCC $ "~r~Error:~w~|| " ++ msg
+                        printCC (Client.config state) $ "~r~Error:~w~|| " ++ msg
                         return state
 
     handleIncoming us newState

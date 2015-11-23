@@ -5,6 +5,7 @@ import Data.List (find)
 import Text.Printf (printf)
 import IRC.Display (printCC)
 import IRC.Client (State(..), joinChannel, leaveChannel, sendMessage)
+import Config (Config(..))
 
 type Name = String
 type Usage = String
@@ -39,10 +40,10 @@ sendCmd s _ = return s
 
 modsCmd :: Action
 modsCmd s (chan:_) = do
-    printCC $ printf "~r~%d~y~ moderators connected to ~r~||%s"
+    printCC (config s) $ printf "~r~%d~y~ moderators connected to ~r~||%s"
         (length mods)
         chan
-    mapM_ (\(i,x) -> printCC $ printf "~y~%d.~r~|| %s" i x) mods
+    mapM_ (\(i,x) -> printCC (config s) $ printf "~y~%d.~r~|| %s" i x) mods
     return s
     where mods =
             zip [(1::Int)..]
@@ -52,9 +53,9 @@ modsCmd s _ = return s
 
 channelsCmd :: Action
 channelsCmd s _ = do
-    printCC $ printf "~y~Connected to ~r~%d~y~|| channels"
+    printCC (config s) $ printf "~y~Connected to ~r~%d~y~|| channels"
         (length channels')
-    mapM_ (\(i,x) -> printCC $ printf "~y~%d. ~r~||%s" i x) channels'
+    mapM_ (\(i,x) -> printCC (config s) $ printf "~y~%d. ~r~||%s" i x) channels'
     return s
     where channels' = zip [(1::Int)..] $ channels s
 
@@ -63,13 +64,13 @@ leaveallCmd s _ = foldM leaveChannel s $ channels s
 
 -- End of command implementations
 
-printCommands :: IO ()
-printCommands = do
-    printCC $ printf "~r~%d~y~|| commands" $ length commands'
+printCommands :: Config -> IO ()
+printCommands cfg = do
+    printCC cfg $ printf "~r~%d~y~|| commands" $ length commands'
     mapM_ (\(i, (name, usage, _, _)) ->
         if null usage
-            then printCC $ printf "~y~%d. ~r~||%s" i name
-            else printCC $ printf "~y~%d. ~r~%s: ~w~||%s" i name usage
+            then printCC cfg $ printf "~y~%d. ~r~||%s" i name
+            else printCC cfg $ printf "~y~%d. ~r~%s: ~w~||%s" i name usage
         ) commands'
     where commands' = zip [(1::Int)..] commands
 
@@ -90,7 +91,7 @@ process state = match . words
     where
         match ("commands":_) =
             Right $ do
-                printCommands
+                printCommands (config state)
                 return state
         match (cmd:args) = executeCommand cmd args state
         match [] = Left "No input"

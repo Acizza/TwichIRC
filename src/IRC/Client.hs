@@ -92,14 +92,14 @@ display _ (Login (Failure rsn))      = printf "~r~Login failed: ~w~||%s" rsn
 
 process :: State -> Message -> IO State
 process s m@(ModeratorJoin ch uname) = do
-    printCC $ display s m
+    printCC (config s) $ display s m
     return $ s { moderators = (ch,uname):moderators s }
 process s m@(ModeratorLeave ch uname) = do
-    printCC $ display s m
+    printCC (config s) $ display s m
     return $ s { moderators = delete (ch,uname) $ moderators s}
 process s (Ping content) = do
     sendLine s $ "PONG " ++ content
     return s
 process s m = do
-    printCC $ display s m
+    printCC (config s) $ display s m
     return s

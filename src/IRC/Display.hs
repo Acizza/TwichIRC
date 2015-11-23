@@ -3,35 +3,50 @@ module IRC.Display (printCC) where
 import System.Console.ANSI
 import Data.Time.Format (formatTime, defaultTimeLocale)
 import Data.Time.LocalTime (getZonedTime)
+import Config
 
 -- Prints a string with color formatting.
 -- ~COLOR~ specifies a color to use for the next portion of the text,
 -- where COLOR is the first letter of the desired color.
 --
 -- || indicates that color parsing should be stopped and the rest of the line will be printed.
-printCC :: String -> IO ()
-printCC str = do
+printCC :: Config -> String -> IO ()
+printCC cfg str = do
     curTime <- getZonedTime
     putStr $ formatTime defaultTimeLocale "[%I:%M:%S] " curTime
-    printCC' str
+    printCC' cfg str
 
-printCC' :: String -> IO ()
-printCC' [] = setSGR [Reset]
-printCC' ('~':c:'~':xs) = do
+printCC' :: Config -> String -> IO ()
+printCC' _ [] = setSGR [Reset]
+printCC' cfg ('~':c:'~':xs) = do
     setSGR [SetColor Foreground Dull color]
-    printCC' xs
+    printCC' cfg xs
     where color =
             case c of
-                'w' -> White
-                'g' -> Green
-                'c' -> Cyan
-                'm' -> Magenta
-                'r' -> Red
-                'y' -> Yellow
-                _   -> White
-printCC' ('|':'|':xs) = do
+                'w' -> tryFind cfg "white" White
+                'g' -> tryFind cfg "green" Green
+                'c' -> tryFind cfg "cyan" Cyan
+                'm' -> tryFind cfg "magenta" Magenta
+                'r' -> tryFind cfg "red" Red
+                'y' -> tryFind cfg "yellow" Yellow
+                _   -> tryFind cfg "white" White
+printCC' _ ('|':'|':xs) = do
     putStrLn xs
     setSGR [Reset]
-printCC' (x:xs) = do
+printCC' c (x:xs) = do
     putChar x
-    printCC' xs
+    printCC' c xs
+
+tryFind :: Config -> String -> Color -> Color
+tryFind cfg name defColor =
+    case find cfg ("c." ++ name) of
+        Just val ->
+            case val of
+                "white"   -> White
+                "green"   -> Green
+                "cyan"    -> Cyan
+                "magenta" -> Magenta
+                "red"     -> Red
+                "yellow"  -> Yellow
+                _         -> defColor
+        Nothing -> defColor

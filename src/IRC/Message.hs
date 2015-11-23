@@ -10,7 +10,6 @@ import Data.List.Split (splitOn)
 type Reason = String
 
 data Result = Success Username | Failure Reason
-    deriving (Show)
 
 data Message =
     Message Channel Username String |

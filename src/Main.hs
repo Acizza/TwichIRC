@@ -69,4 +69,5 @@ main = do
             bracket (Client.connect "irc.twitch.tv" 6667) hClose $ \h -> do
                 state <- initClient h uname oauth channels
                 startProcessing state
-        _ -> printCC "~y~Usage~w~||: <username> <oauth key> [channels to join]"
+        _ -> printCC (Config.Config [])
+                "~y~Usage~w~||: <username> <oauth key> [channels to join]"
