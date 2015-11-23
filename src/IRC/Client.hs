@@ -17,11 +17,13 @@ import Network (HostName, PortNumber, PortID(..), connectTo, withSocketsDo)
 import Data.List (delete, isPrefixOf)
 import Text.Printf (printf)
 import System.Console.ANSI (setTitle)
+import Config (Config(..))
 
 data State = State {
     connection :: Handle,
     channels   :: [Channel],
-    moderators :: [(Channel, String)]
+    moderators :: [(Channel, String)],
+    config     :: Config
 }
 
 updateTitle :: State -> IO ()

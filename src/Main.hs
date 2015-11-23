@@ -1,23 +1,35 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Main where
 
 import System.IO
 import IRC.IRC
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar (putMVar, newEmptyMVar)
-import Control.Exception (bracket)
+import Control.Exception (bracket, try, SomeException)
 import Control.Monad (unless, foldM)
 import System.Environment (getArgs)
 import Processor (ProcessType(..), UpdateSource, handleIncoming)
 import IRC.Display (printCC)
+import qualified Config (Config(..), parse)
 import qualified IRC.Message as Message (parse)
 import qualified IRC.Client as Client
 
 initClient :: Handle -> Username -> Oauth -> [Channel] -> IO Client.State
 initClient conn username oauth channels = do
+    cfg <- do
+        result <- try $ readFile "settings.cfg"
+        case result of
+            Left (_::SomeException) ->
+                return $ Config.Config []
+            Right str ->
+                return $ Config.parse str
+
     let state = Client.State {
         Client.connection = conn,
         Client.channels   = [],
-        Client.moderators = []
+        Client.moderators = [],
+        Client.config     = cfg
     }
     Client.updateTitle state
     Client.login username oauth state
