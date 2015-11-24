@@ -26,4 +26,4 @@ parse :: String -> Config
 parse content =
     Config $ map (\(_:f:s:_) -> Entry f s) matches
     where matches =
-            content =~ "(.+?):\\s*(.+)" :: [[String]]
+            content =~ "^([^#].+?):\\s*(.+)" :: [[String]]
