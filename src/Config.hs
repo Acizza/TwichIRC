@@ -7,6 +7,7 @@ module Config
 , readFile'
 , find
 , findGroup
+, set
 ) where
 
 import Text.Regex.PCRE
@@ -44,3 +45,18 @@ find (Config cfg) name =
 
 findGroup :: Config -> [String] -> [Value]
 findGroup cfg = mapMaybe (find cfg)
+
+-- Replaces all instances of name with value.
+-- Adds the Entry if it doesn't exist.
+set :: Config -> Name -> Value -> Config
+set cfg@(Config cfg') name value =
+    Config $
+        case find cfg name of
+            Just _ -> replace name value
+            Nothing -> Entry name value : cfg'
+    where replace name' value' =
+            map (\e@(Entry n _) ->
+                if n == name'
+                    then Entry n value'
+                    else e
+            ) cfg'

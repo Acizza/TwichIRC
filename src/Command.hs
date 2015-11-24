@@ -6,6 +6,7 @@ import Text.Printf (printf)
 import IRC.Display (printCC)
 import IRC.Client (State(..), joinChannel, leaveChannel, sendMessage)
 import Config (Config(..))
+import qualified Config (set)
 
 type Name = String
 type Usage = String
@@ -20,6 +21,7 @@ commands = [
     ("join", "<channels>", 1, joinCmd),
     ("leave", "<channels>", 1, leaveCmd),
     ("send", "<channel> <message>", 2, sendCmd),
+    ("setcfg", "<key> <value>", 2, setcfgCmd),
     ("mods", "<channel>", 1, modsCmd),
     ("channels", "", 0, channelsCmd),
     ("leaveall", "", 0, leaveallCmd)]
@@ -37,6 +39,13 @@ sendCmd s (chan:msg) = do
     sendMessage chan (unwords msg) s
     return s
 sendCmd s _ = return s
+
+setcfgCmd :: Action
+setcfgCmd s (name:value:_) = do
+    let newCfg =
+            Config.set (config s) name value
+    return $ s { config = newCfg }
+setcfgCmd s _ = return s
 
 modsCmd :: Action
 modsCmd s (chan:_) = do
