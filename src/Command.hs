@@ -17,18 +17,18 @@ type NumArgs = Int
 type Arguments = [String]
 type Action = State -> Arguments -> IO State
 
-type Command = (Name, Usage, NumArgs, Action)
+data Command = Command Name Usage NumArgs Action
 
 commands :: [Command]
 commands = [
-    ("join", "<channels>", 1, joinCmd),
-    ("leave", "<channels>", 1, leaveCmd),
-    ("send", "<channel> <message>", 2, sendCmd),
-    ("mods", "<channel>", 1, modsCmd),
-    ("channels", "", 0, channelsCmd),
-    ("leaveall", "", 0, leaveallCmd),
-    ("setcfg", "<key> <value>", 2, setcfgCmd),
-    ("savecfg", "", 0, savecfgCmd)]
+    Command "join" "<channels>" 1 joinCmd,
+    Command "leave" "<channels>" 1 leaveCmd,
+    Command "send" "<channel> <message>" 2 sendCmd,
+    Command "mods" "<channel>" 1 modsCmd,
+    Command "channels" "" 0 channelsCmd,
+    Command "leaveall" "" 0 leaveallCmd,
+    Command "setcfg" "<key> <value>" 2 setcfgCmd,
+    Command "savecfg" "" 0 savecfgCmd]
 
 -- Start of command implementations
 
@@ -91,7 +91,7 @@ savecfgCmd s _ = do
 printCommands :: Config -> IO ()
 printCommands cfg = do
     printCC cfg $ printf "~r~%d~y~|| commands" $ length commands'
-    mapM_ (\(i, (name, usage, _, _)) ->
+    mapM_ (\(i, Command name usage _ _) ->
         if null usage
             then printCC cfg $ printf "~y~%d. ~r~||%s" i name
             else printCC cfg $ printf "~y~%d. ~r~%s: ~w~||%s" i name usage
@@ -99,12 +99,12 @@ printCommands cfg = do
     where commands' = zip [(1::Int)..] commands
 
 findCommand :: Name -> Maybe Command
-findCommand name = find (\(n, _, _, _) -> n == name) commands
+findCommand name = find (\(Command n _ _ _) -> n == name) commands
 
 executeCommand :: Name -> Arguments -> State -> Either String (IO State)
 executeCommand name args state =
     case findCommand name of
-        Just (_, usage, nArgs, f) ->
+        Just (Command _ usage nArgs f) ->
             if nArgs > length args
                 then Left $ printf $ "Usage: " ++ usage
                 else Right $ f state args
