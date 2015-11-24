@@ -8,7 +8,7 @@ import Data.List (find)
 import Text.Printf (printf)
 import IRC.Display (printCC, printCCError)
 import IRC.Client (State(..), joinChannel, leaveChannel, sendMessage)
-import Config (Config(..), Entry(..))
+import Config (Config(..))
 import qualified Config (set, path)
 
 type Name = String
@@ -84,9 +84,7 @@ savecfgCmd s _ = do
     return s
     where
         cfg@(Config cfg') = config s
-        settings =
-            unlines .
-            map (\(Entry n v) -> n ++ ": " ++ v) $ cfg'
+        settings = unlines . map show $ cfg'
 
 -- End of command implementations
 

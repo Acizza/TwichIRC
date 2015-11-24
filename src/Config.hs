@@ -20,6 +20,10 @@ type Name = String
 type Value = String
 
 data Entry = Entry Name Value
+
+instance Show Entry where
+    show (Entry n v) = n ++ ": " ++ v
+
 newtype Config = Config [Entry]
 
 path :: String
