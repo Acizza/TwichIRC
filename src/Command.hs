@@ -83,8 +83,8 @@ savecfgCmd s _ = do
         Right _ -> printCC cfg "~y~Config update:~g~|| Success"
     return s
     where
-        cfg@(Config cfg') = config s
-        settings = unlines . map show $ cfg'
+        cfg = config s
+        settings = show cfg
 
 -- End of command implementations
 

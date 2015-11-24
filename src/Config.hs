@@ -26,6 +26,9 @@ instance Show Entry where
 
 newtype Config = Config [Entry]
 
+instance Show Config where
+    show (Config cfg) = unlines . map show $ cfg
+
 path :: String
 path = "settings.cfg"
 
