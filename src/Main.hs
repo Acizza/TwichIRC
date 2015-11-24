@@ -6,34 +6,14 @@ import System.IO
 import IRC.IRC
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar (putMVar, newEmptyMVar)
-import Control.Exception (bracket, try, SomeException)
+import Control.Exception (bracket)
 import Control.Monad (unless, foldM)
 import System.Environment (getArgs)
 import Processor (ProcessType(..), UpdateSource, handleIncoming)
 import IRC.Display (printCC)
-import qualified Config (Config(..), parse)
+import qualified Config (Config(..), findGroup, readFile')
 import qualified IRC.Message as Message (parse)
 import qualified IRC.Client as Client
-
-initClient :: Handle -> Username -> Oauth -> [Channel] -> IO Client.State
-initClient conn username oauth channels = do
-    cfg <- do
-        result <- try $ readFile "settings.cfg"
-        case result of
-            Left (_::SomeException) ->
-                return $ Config.Config []
-            Right str ->
-                return $ Config.parse str
-
-    let state = Client.State {
-        Client.connection = conn,
-        Client.channels   = [],
-        Client.moderators = [],
-        Client.config     = cfg
-    }
-    Client.updateTitle state
-    Client.login username oauth state
-    foldM Client.joinChannel state channels
 
 startProcessing :: Client.State -> IO ()
 startProcessing state = do
@@ -61,13 +41,33 @@ processConsole us = do
     putMVar us (Console line)
     processConsole us
 
+start :: Config.Config -> Username -> Oauth -> [Channel] -> IO ()
+start cfg username oauth channels =
+    bracket (Client.connect "irc.twitch.tv" 6667) hClose $ \h -> do
+        let s = Client.State {
+            Client.connection = h,
+            Client.channels   = [],
+            Client.moderators = [],
+            Client.config     = cfg
+        }
+        Client.updateTitle s
+        Client.login username oauth s
+        state <- foldM Client.joinChannel s channels
+        startProcessing state
+
+initFromConfig :: Config.Config -> IO ()
+initFromConfig cfg = do
+    channels <- getArgs
+    case Config.findGroup cfg ["username","oauth"] of
+        uname:oauth:_ -> start cfg uname oauth channels
+        _ -> printCC cfg
+                "~y~Usage~w~||: <username> <oauth key> [channels to join]"
+
 main :: IO ()
 main = do
+    cfg <- Config.readFile' "settings.cfg"
     args <- getArgs
     case args of
         uname:oauth:channels ->
-            bracket (Client.connect "irc.twitch.tv" 6667) hClose $ \h -> do
-                state <- initClient h uname oauth channels
-                startProcessing state
-        _ -> printCC (Config.Config [])
-                "~y~Usage~w~||: <username> <oauth key> [channels to join]"
+            start cfg uname oauth channels
+        _ -> initFromConfig cfg
