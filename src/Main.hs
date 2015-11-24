@@ -32,11 +32,11 @@ initFromConfig cfg = do
     case Config.findGroup cfg ["username","oauth"] of
         uname:oauth:_ -> start cfg uname oauth channels
         _ -> printCC cfg
-                "~y~Usage~w~||: <username> <oauth key> [channels to join]"
+                "~r~Usage~w~||: <username> <oauth key> [channels to join]"
 
 main :: IO ()
 main = do
-    cfg <- Config.readFile' "settings.cfg"
+    cfg <- Config.readFile'
     args <- getArgs
     case args of
         uname:oauth:channels ->

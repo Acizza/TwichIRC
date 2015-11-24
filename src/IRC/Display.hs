@@ -1,4 +1,7 @@
-module IRC.Display (printCC) where
+module IRC.Display
+( printCC
+, printCCError
+) where
 
 import System.Console.ANSI
 import Config (Config, find)
@@ -15,6 +18,9 @@ printCC cfg str = do
     curTime <- getZonedTime
     putStr $ formatTime defaultTimeLocale "[%I:%M:%S] " curTime
     printCC' cfg str
+
+printCCError :: Config -> String -> IO ()
+printCCError cfg str = printCC cfg $ "~r~Error~w~||: " ++ str
 
 printCC' :: Config -> String -> IO ()
 printCC' _ [] = setSGR [Reset]

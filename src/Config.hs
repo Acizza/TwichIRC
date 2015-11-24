@@ -3,6 +3,7 @@
 module Config
 ( Entry(..)
 , Config(..)
+, path
 , parse
 , readFile'
 , find
@@ -21,14 +22,17 @@ type Value = String
 data Entry = Entry Name Value
 newtype Config = Config [Entry]
 
+path :: String
+path = "settings.cfg"
+
 parse :: String -> Config
 parse content =
     Config $ map (\(_:f:s:_) -> Entry f s) matches
     where matches =
             content =~ "^([^#].+?):\\s*(.+)" :: [[String]]
 
-readFile' :: String -> IO Config
-readFile' path = do
+readFile' :: IO Config
+readFile' = do
     result <- try $ readFile path
     return $
         case result of

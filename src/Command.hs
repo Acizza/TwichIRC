@@ -1,12 +1,15 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Command (process) where
 
+import Control.Exception (try, SomeException)
 import Control.Monad (foldM)
 import Data.List (find)
 import Text.Printf (printf)
-import IRC.Display (printCC)
+import IRC.Display (printCC, printCCError)
 import IRC.Client (State(..), joinChannel, leaveChannel, sendMessage)
-import Config (Config(..))
-import qualified Config (set)
+import Config (Config(..), Entry(..))
+import qualified Config (set, path)
 
 type Name = String
 type Usage = String
@@ -21,10 +24,11 @@ commands = [
     ("join", "<channels>", 1, joinCmd),
     ("leave", "<channels>", 1, leaveCmd),
     ("send", "<channel> <message>", 2, sendCmd),
-    ("setcfg", "<key> <value>", 2, setcfgCmd),
     ("mods", "<channel>", 1, modsCmd),
     ("channels", "", 0, channelsCmd),
-    ("leaveall", "", 0, leaveallCmd)]
+    ("leaveall", "", 0, leaveallCmd),
+    ("setcfg", "<key> <value>", 2, setcfgCmd),
+    ("savecfg", "", 0, savecfgCmd)]
 
 -- Start of command implementations
 
@@ -40,13 +44,6 @@ sendCmd s (chan:msg) = do
     return s
 sendCmd s _ = return s
 
-setcfgCmd :: Action
-setcfgCmd s (name:value:_) = do
-    let newCfg =
-            Config.set (config s) name value
-    return $ s { config = newCfg }
-setcfgCmd s _ = return s
-
 modsCmd :: Action
 modsCmd s (chan:_) = do
     printCC (config s) $ printf "~r~%d~y~ moderators connected to ~r~||%s"
@@ -55,9 +52,9 @@ modsCmd s (chan:_) = do
     mapM_ (\(i,x) -> printCC (config s) $ printf "~y~%d.~r~|| %s" i x) mods
     return s
     where mods =
-            zip [(1::Int)..]
-            . map snd
-            . filter (\(c,_) -> c == chan) $ moderators s
+            zip [(1::Int)..] .
+            map snd .
+            filter (\(c,_) -> c == chan) $ moderators s
 modsCmd s _ = return s
 
 channelsCmd :: Action
@@ -70,6 +67,26 @@ channelsCmd s _ = do
 
 leaveallCmd :: Action
 leaveallCmd s _ = foldM leaveChannel s $ channels s
+
+setcfgCmd :: Action
+setcfgCmd s (name:value:_) = do
+    let newCfg =
+            Config.set (config s) name value
+    return $ s { config = newCfg }
+setcfgCmd s _ = return s
+
+savecfgCmd :: Action
+savecfgCmd s _ = do
+    result <- try $ writeFile Config.path settings
+    case result of
+        Left (e::SomeException) -> printCCError cfg $ show e
+        Right _ -> printCC cfg "~y~Config update:~g~|| Success"
+    return s
+    where
+        cfg@(Config cfg') = config s
+        settings =
+            unlines .
+            map (\(Entry n v) -> n ++ ": " ++ v) $ cfg'
 
 -- End of command implementations
 
