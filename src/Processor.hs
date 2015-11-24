@@ -1,17 +1,22 @@
 module Processor
 ( ProcessType(..)
 , UpdateSource
-, handleIncoming
+, startProcessing
+, processNetwork
+, processConsole
 ) where
 
-import Control.Concurrent.MVar (MVar, takeMVar)
-import IRC.Message (Message)
+import System.IO
+import Control.Concurrent (forkIO)
+import Control.Concurrent.MVar (MVar, putMVar, takeMVar, newEmptyMVar)
+import Control.Monad (unless)
+import qualified IRC.Message as Message (Message, parse)
 import IRC.Display (printCC)
 import qualified Command (process)
 import qualified IRC.Client as Client (State(..), process)
 
 data ProcessType =
-    IRC Message |
+    IRC Message.Message |
     Console String
 
 type UpdateSource = MVar ProcessType
@@ -30,3 +35,29 @@ handleIncoming us state = do
                         return state
 
     handleIncoming us newState
+
+startProcessing :: Client.State -> IO ()
+startProcessing state = do
+    updater <- newEmptyMVar
+    _ <- forkIO $ handleIncoming updater state
+    _ <- forkIO $ processNetwork updater (Client.connection state)
+    processConsole updater
+
+processNetwork :: UpdateSource -> Handle -> IO ()
+processNetwork us handle = do
+    eof <- hIsEOF handle
+    op  <- hIsClosed handle
+    unless (eof || op) $ do
+        line <- hGetLine handle
+        unless (null line) $
+            case Message.parse line of
+                Just x -> putMVar us (IRC x)
+                Nothing -> return ()
+
+        processNetwork us handle
+
+processConsole :: UpdateSource -> IO ()
+processConsole us = do
+    line <- getLine
+    putMVar us (Console line)
+    processConsole us
