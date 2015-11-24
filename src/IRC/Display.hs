@@ -1,9 +1,9 @@
 module IRC.Display (printCC) where
 
 import System.Console.ANSI
+import Config (Config, find)
 import Data.Time.Format (formatTime, defaultTimeLocale)
 import Data.Time.LocalTime (getZonedTime)
-import Config
 
 -- Prints a string with color formatting.
 -- ~COLOR~ specifies a color to use for the next portion of the text,

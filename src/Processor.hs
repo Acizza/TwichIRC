@@ -2,8 +2,6 @@ module Processor
 ( ProcessType(..)
 , UpdateSource
 , startProcessing
-, processNetwork
-, processConsole
 ) where
 
 import System.IO

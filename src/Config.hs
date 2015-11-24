@@ -17,8 +17,8 @@ import qualified Data.List as L (find)
 type Name = String
 type Value = String
 
-data Entry = Entry Name Value deriving (Show)
-newtype Config = Config [Entry] deriving (Show)
+data Entry = Entry Name Value
+newtype Config = Config [Entry]
 
 parse :: String -> Config
 parse content =
