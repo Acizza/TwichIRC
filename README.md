@@ -1,7 +1,7 @@
 Usage
 =====
 
-At the moment, the only way to you can start the client is by providing your username, OAuth code, and a (optional) list of channels to join after login:
+At the moment, the only way to you can start the client is by providing your username, OAuth code (which you can get from [here](https://twitchapps.com/tmi/)), and a (optional) list of channels to join after login:
 ```
 ./twirc test_username oauth:12345 channel1 channel2...
 ```
