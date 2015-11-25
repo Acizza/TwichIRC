@@ -1,9 +1,13 @@
 Usage
 =====
 
-At the moment, the only way to you can start the client is by providing your username, OAuth code (which you can get from [here](https://twitchapps.com/tmi/)), and a (optional) list of channels to join after login:
+You can start the client either by providing your username, OAuth code (which you can get from [here](https://twitchapps.com/tmi/)), and a (optional) list of channels to join after login:
 ```
 ./twirc test_username oauth:12345 channel1 channel2...
+```
+Or, by creating a settings file (described [here](#settings)), and optionally providing a list of channels to join after login:
+```
+./twirc channel1 channel2...
 ```
 
 Commands
@@ -19,6 +23,8 @@ send     | channel, message | Sends a message to the specified channel.
 mods     | channel          | Prints a list of moderators connected to the specified channel.
 channels | none             | Prints a list of all currently connected channels.
 leaveall | none             | Leaves all currently connected channels.
+setcfg   | key, value       | Updates the given setting key with the given value.
+savecfg  | none             | Writes the current configuration to the settings file.
 
 Settings
 ========
@@ -27,6 +33,8 @@ You can change various aspects of the client by creating a file named ```setting
 
 A typical settings.cfg file may look like this:
 ```
+username: test_username
+oauth: oauth:12345
 c.red: magenta
 #c.white: red
 c.yellow: cyan
