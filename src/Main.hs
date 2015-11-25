@@ -6,6 +6,7 @@ import System.IO
 import IRC.IRC
 import Control.Exception (bracket)
 import Control.Monad (foldM)
+import Data.List (isPrefixOf)
 import System.Environment (getArgs)
 import Processor (startProcessing)
 import IRC.Display (printCC)
@@ -39,6 +40,9 @@ main = do
     cfg <- Config.readFile'
     args <- getArgs
     case args of
-        uname:oauth:channels ->
-            start cfg uname oauth channels
+        uname:oauth:channels
+            | "oauth:" `isPrefixOf` oauth ->
+                start cfg uname oauth channels
+            | otherwise ->
+                initFromConfig cfg
         _ -> initFromConfig cfg
