@@ -29,12 +29,13 @@ printCC' cfg ('~':c:'~':xs) = do
     printCC' cfg xs
     where color =
             case c of
-                'w' -> tryFind cfg "white" White
-                'g' -> tryFind cfg "green" Green
-                'c' -> tryFind cfg "cyan" Cyan
-                'm' -> tryFind cfg "magenta" Magenta
+                'b' -> tryFind cfg "black" Black
                 'r' -> tryFind cfg "red" Red
+                'g' -> tryFind cfg "green" Green
                 'y' -> tryFind cfg "yellow" Yellow
+                'B' -> tryFind cfg "blue" Blue
+                'm' -> tryFind cfg "magenta" Magenta
+                'c' -> tryFind cfg "cyan" Cyan
                 _   -> tryFind cfg "white" White
 printCC' _ ('|':'|':xs) = do
     putStrLn xs
@@ -48,11 +49,13 @@ tryFind cfg name defColor =
     case find cfg ("c." ++ name) of
         Just val ->
             case val of
-                "white"   -> White
-                "green"   -> Green
-                "cyan"    -> Cyan
-                "magenta" -> Magenta
+                "black"   -> Black
                 "red"     -> Red
+                "green"   -> Green
                 "yellow"  -> Yellow
+                "blue"    -> Blue
+                "magenta" -> Magenta
+                "cyan"    -> Cyan
+                "white"   -> White
                 _         -> defColor
         Nothing -> defColor
