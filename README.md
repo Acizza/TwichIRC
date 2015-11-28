@@ -49,9 +49,11 @@ c.red: magenta
 The example above will make Red be displayed as Magenta.
 
 Here is the full list of colors you can use:
-* White
-* Green
-* Cyan
-* Magenta
+* Black
 * Red
+* Green
 * Yellow
+* Blue
+* Magenta
+* Cyan
+* White
