@@ -25,6 +25,7 @@ channels | none             | Prints a list of all currently connected channels.
 leaveall | none             | Leaves all currently connected channels.
 setcfg   | key, value       | Updates the given setting key with the given value.
 savecfg  | none             | Writes the current configuration to the settings file.
+viewcfg  | none             | Displays the current configuration, including settings added during runtime.
 
 Settings
 ========
@@ -35,6 +36,7 @@ A typical settings.cfg file may look like this:
 ```
 username: test_username
 oauth: oauth:12345
+c.intensity: dull
 c.red: magenta
 #c.white: red
 c.yellow: cyan
@@ -57,3 +59,5 @@ Here is the full list of colors you can use:
 * Magenta
 * Cyan
 * White
+
+You can also set the intensity of the colors displayed by creating a setting named ```c.intensity``` that has a value of either ```dull``` or ```vivid```.
