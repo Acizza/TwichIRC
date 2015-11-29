@@ -4,7 +4,7 @@ module IRC.Display
 ) where
 
 import System.Console.ANSI
-import Config (Config, find)
+import Config (Config, tryFind)
 import Data.Time.Format (formatTime, defaultTimeLocale)
 import Data.Time.LocalTime (getZonedTime)
 
@@ -25,18 +25,18 @@ printCCError cfg str = printCC cfg $ "~r~Error~w~||: " ++ str
 printCC' :: Config -> String -> IO ()
 printCC' _ [] = setSGR [Reset]
 printCC' cfg ('~':c:'~':xs) = do
-    setSGR [SetColor Foreground Dull color]
+    setSGR [SetColor Foreground (findIntensity cfg) color]
     printCC' cfg xs
     where color =
             case c of
-                'b' -> tryFind cfg "black" Black
-                'r' -> tryFind cfg "red" Red
-                'g' -> tryFind cfg "green" Green
-                'y' -> tryFind cfg "yellow" Yellow
-                'B' -> tryFind cfg "blue" Blue
-                'm' -> tryFind cfg "magenta" Magenta
-                'c' -> tryFind cfg "cyan" Cyan
-                _   -> tryFind cfg "white" White
+                'b' -> findColor cfg "black" Black
+                'r' -> findColor cfg "red" Red
+                'g' -> findColor cfg "green" Green
+                'y' -> findColor cfg "yellow" Yellow
+                'B' -> findColor cfg "blue" Blue
+                'm' -> findColor cfg "magenta" Magenta
+                'c' -> findColor cfg "cyan" Cyan
+                _   -> findColor cfg "white" White
 printCC' _ ('|':'|':xs) = do
     putStrLn xs
     setSGR [Reset]
@@ -44,11 +44,19 @@ printCC' c (x:xs) = do
     putChar x
     printCC' c xs
 
-tryFind :: Config -> String -> Color -> Color
-tryFind cfg name defColor =
-    case find cfg ("c." ++ name) of
-        Just val ->
-            case val of
+findIntensity :: Config -> ColorIntensity
+findIntensity cfg =
+    tryFind cfg "c.intensity" Dull
+        (\x ->
+            case x of
+                "vivid" -> Vivid
+                _       -> Dull)
+
+findColor :: Config -> String -> Color -> Color
+findColor cfg name defColor =
+    tryFind cfg ("c." ++ name) defColor
+        (\x ->
+            case x of
                 "black"   -> Black
                 "red"     -> Red
                 "green"   -> Green
@@ -57,5 +65,4 @@ tryFind cfg name defColor =
                 "magenta" -> Magenta
                 "cyan"    -> Cyan
                 "white"   -> White
-                _         -> defColor
-        Nothing -> defColor
+                _         -> defColor)

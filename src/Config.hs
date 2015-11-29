@@ -7,6 +7,7 @@ module Config
 , parse
 , readFile'
 , find
+, tryFind
 , findGroup
 , set
 ) where
@@ -53,6 +54,12 @@ find (Config cfg) name =
         Nothing -> Nothing
     where result =
             L.find (\(Entry n _) -> n == name) cfg
+
+tryFind :: Config -> Name -> a -> (Value -> a) -> a
+tryFind cfg name def f =
+    case find cfg name of
+        Just v -> f v
+        Nothing -> def
 
 findGroup :: Config -> [String] -> [Value]
 findGroup cfg = mapMaybe (find cfg)
