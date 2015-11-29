@@ -28,7 +28,8 @@ commands = [
     Command "channels" "" 0 channelsCmd,
     Command "leaveall" "" 0 leaveallCmd,
     Command "setcfg" "<key> <value>" 2 setcfgCmd,
-    Command "savecfg" "" 0 savecfgCmd]
+    Command "savecfg" "" 0 savecfgCmd,
+    Command "viewcfg" "" 0 viewcfgCmd]
 
 -- Start of command implementations
 
@@ -85,6 +86,14 @@ savecfgCmd s _ = do
     where
         cfg = config s
         settings = show cfg
+
+viewcfgCmd :: Action
+viewcfgCmd s _ = do
+    mapM_ (\(i,x) -> printCC cfg $ printf "~y~%d. ~r~||%s" i x) settings
+    return s
+    where
+        cfg = config s
+        settings = zip [(1::Int)..] (lines . show $ cfg)
 
 -- End of command implementations
 
