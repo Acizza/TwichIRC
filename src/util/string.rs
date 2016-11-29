@@ -1,6 +1,6 @@
 pub trait StringUtil {
-    fn between(&self, a: &str, b: &str) -> Result<String, String>;
-    fn after(&self, a: &str) -> Result<String, String>;
+    fn between(&self, delim_a: &str, delim_b: &str) -> Result<String, String>;
+    fn after(&self, delim: &str) -> Result<String, String>;
 }
 
 impl StringUtil for str {
