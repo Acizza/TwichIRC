@@ -3,4 +3,13 @@ name = "twirc"
 version = "0.1.0"
 authors = ["Acizza <jonathanmce@gmail.com>"]
 
+[lib]
+name = "twirc"
+path = "src/lib/lib.rs"
+
+[[bin]]
+name = "twirc"
+path = "src/bin/main.rs"
+doc  = false
+
 [dependencies]
