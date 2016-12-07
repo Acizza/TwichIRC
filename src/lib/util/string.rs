@@ -28,14 +28,14 @@ impl StrUtil for str {
         let start_idx =
             self
             .find(delim_a)
-            .ok_or(format!("between(): start string \"{}\" not found", delim_a))?;
+            .ok_or(format!("util::string::between(): start string \"{}\" not found", delim_a))?;
 
         let start_str = &self[start_idx + delim_a.len()..];
 
         let end =
             start_str
             .find(delim_b)
-            .ok_or(format!("between(): end string \"{}\" not found", delim_b))?;
+            .ok_or(format!("util::string::between(): end string \"{}\" not found", delim_b))?;
 
         Ok(start_str[..end].to_string())
     }
@@ -44,6 +44,6 @@ impl StrUtil for str {
         self
         .find(delim)
         .map(|i| self[i + delim.len()..].to_string())
-        .ok_or(format!("after(): string delimiter \"{}\" not found", delim))
+        .ok_or(format!("util::string::after(): string delimiter \"{}\" not found", delim))
     }
 }
