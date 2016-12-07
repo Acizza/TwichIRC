@@ -1,4 +1,4 @@
-use ::util::string::StringUtil;
+use ::util::string::StrUtil;
 
 fn read_message_code(string: &str) -> Option<String> {
     // TODO: Replace with slice pattern syntax when it becomes stable
@@ -65,7 +65,6 @@ impl Message {
     /// # Example
     ///
     /// ```
-    /// extern crate twirc;
     /// use twirc::irc::message::{Message, MessageError};
     ///
     /// match Message::parse(":tmi.twitch.tv 004 test_name") {

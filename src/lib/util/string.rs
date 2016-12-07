@@ -1,9 +1,29 @@
-pub trait StringUtil {
+/// A collection of miscellaneous methods for `&str`.
+pub trait StrUtil {
+    /// Returns a `String` between `delim_a` and `delim_b`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use twirc::util::string::StrUtil;
+    ///
+    /// println!("{:?}", "a:selected_string!garbage".between(":", "!"));
+    /// ```
     fn between(&self, delim_a: &str, delim_b: &str) -> Result<String, String>;
+
+    /// Returns the portion of a `&str` that occurs after `delim`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use twirc::util::string::StrUtil;
+    ///
+    /// println!("{:?}", ":garbage :selected_string".after(" :"));
+    /// ```
     fn after(&self, delim: &str) -> Result<String, String>;
 }
 
-impl StringUtil for str {
+impl StrUtil for str {
     fn between(&self, delim_a: &str, delim_b: &str) -> Result<String, String> {
         let start_idx =
             self

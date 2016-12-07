@@ -2,7 +2,7 @@ extern crate twirc;
 
 use std::env;
 use std::io::BufRead;
-use twirc::irc::Message;
+use twirc::irc::message::Message;
 use twirc::irc::Connection;
 
 fn read_incoming(conn: Connection) {
