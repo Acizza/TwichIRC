@@ -31,12 +31,14 @@ impl From<String> for MessageError {
 
 pub type Reply    = String;
 pub type Contents = String;
+pub type Nick     = String;
 
 #[derive(Debug)]
 pub enum Message {
     Message { nick: String, channel: String, msg: String},
-    Join    { nick: String, channel: String },
-    Leave   { nick: String, channel: String },
+    Joined  { nick: String, channel: String },
+    Left    { nick: String, channel: String },
+    Viewers { channel: String, viewers: Vec<Nick> },
     Ping(Reply),
     Notice(Contents),
 }
@@ -57,15 +59,27 @@ impl Message {
                 }
             ),
             "JOIN" => Ok(
-                Join {
+                Joined {
                     nick:    get_nick()?,
                     channel: string.after(" #")?,
                 }
             ),
             "PART" => Ok(
-                Leave {
+                Left {
                     nick:    get_nick()?,
                     channel: string.after(" #")?,
+                }
+            ),
+            // List of initial channel viewers
+            "353" => Ok(
+                Viewers {
+                    channel: string.between("#", " :")?,
+                    viewers:
+                        string
+                        .after(" :")?
+                        .split(' ')
+                        .map(String::from)
+                        .collect(),
                 }
             ),
             "PING"   => Ok(Ping(string.after("PING ")?)),
