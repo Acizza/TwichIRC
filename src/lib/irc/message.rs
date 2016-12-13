@@ -17,7 +17,7 @@ pub type Code   = String;
 pub type Reason = String;
 
 /// Represents a message parse failure.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum MessageError {
     /// No message code found.
     NoCode,
@@ -39,14 +39,14 @@ pub type Contents = String;
 pub type Nick     = String;
 
 /// Indicates whether someone has received or lost moderator status to a channel.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ModStatus {
     Received,
     Lost,
 }
 
 /// Represents a message from the IRC server.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Message {
     /// A chat message has been sent.
     Message { nick: String, channel: String, msg: String},
@@ -75,12 +75,17 @@ impl Message {
     /// ```
     /// use twirc::irc::message::{Message, MessageError};
     ///
-    /// match Message::parse(":tmi.twitch.tv 004 test_name") {
-    ///    Ok(Message::LoggedIn)             => println!("Logged in!"),
-    ///    Ok(Message::Notice(content))      => println!("Failed to log in: {}", content),
-    ///    Err(MessageError::Parse(reason))  => println!("Error parsing message: {}", reason),
-    ///    other => println!("Unhandled type: {:?}", other),
-    /// }
+    /// let x = Message::parse(":test_name!test_name@test_name.server PRIVMSG #test_channel :test message");
+    /// assert_eq!(x,
+    ///     Ok(Message::Message {
+    ///         nick: "test_name".to_string(),
+    ///         channel: "test_channel".to_string(),
+    ///         msg: "test message".to_string()
+    ///     })
+    /// );
+    ///
+    /// let y = Message::parse("test");
+    /// assert_eq!(y, Err(MessageError::NoCode));
     /// ```
     pub fn parse(string: &str) -> Result<Message, MessageError> {
         let get_nick = || string.between(":", "!");

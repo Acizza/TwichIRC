@@ -13,7 +13,8 @@ pub trait StrUtil {
     /// ```
     /// use twirc::util::string::StrUtil;
     ///
-    /// println!("{:?}", "a:selected_string!garbage".between(":", "!"));
+    /// let x = "a:selected_string!garbage";
+    /// assert_eq!(x.between(":", "!"), Ok("selected_string".to_string()));
     /// ```
     fn between(&self, delim_a: &str, delim_b: &str) -> Result<String, String>;
 
@@ -24,7 +25,8 @@ pub trait StrUtil {
     /// ```
     /// use twirc::util::string::StrUtil;
     ///
-    /// println!("{:?}", ":garbage :selected_string".after(" :"));
+    /// let x = ":garbage :selected_string";
+    /// assert_eq!(x.after(" :"), Ok("selected_string".to_string()));
     /// ```
     fn after(&self, delim: &str) -> Result<String, String>;
 
@@ -36,9 +38,9 @@ pub trait StrUtil {
     /// use twirc::util::string::{StrUtil, EitherResult};
     ///
     /// let x = "test +o test";
-    /// let y = "test -o test";
-    ///
     /// assert_eq!(x.either("+o", "-o"), Ok(EitherResult::First));
+    ///
+    /// let y = "test -o test";
     /// assert_eq!(y.either("+o", "-o"), Ok(EitherResult::Second));
     /// ```
     fn either(&self, a: &str, b: &str) -> Result<EitherResult, String>;
