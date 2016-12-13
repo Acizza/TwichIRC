@@ -1,4 +1,4 @@
-use ::util::string::StrUtil;
+use ::util::string::{StrUtil, EitherResult};
 
 fn read_message_code(string: &str) -> Option<String> {
     // TODO: Replace with slice pattern syntax when it becomes stable
@@ -38,25 +38,33 @@ pub type Reply    = String;
 pub type Contents = String;
 pub type Nick     = String;
 
+/// Indicates whether someone has received or lost moderator status to a channel.
+#[derive(Debug, Clone)]
+pub enum ModStatus {
+    Received,
+    Lost,
+}
+
 /// Represents a message from the IRC server.
 #[derive(Debug, Clone)]
 pub enum Message {
-    /// A message sent by a channel viewer.
+    /// A chat message has been sent.
     Message { nick: String, channel: String, msg: String},
-    /// A viewer who joined a channel.
+    /// Someone has joined a channel.
     Joined { nick: String, channel: String },
-    /// A viewer who left a channel.
+    /// Someone has left a channel.
     Left { nick: String, channel: String },
-    /// The list of viewers already in a channel.
+    /// The list of people already in a channel.
     Viewers { channel: String, viewers: Vec<Nick> },
     /// A keepalive check sent by the IRC server.
     /// If "PONG `Reply`" is not sent back within 30 seconds, the connection will be terminated by the server.
     Ping(Reply),
-    /// A special message from the IRC server.
-    /// Failed login attempts will be responded to with this message type.
+    /// A special message from the IRC server (usually indicates a failed login attempt.)
     Notice(Contents),
-    /// Indicates that the login attempt to the IRC server was successful.
+    /// A login attempt was successful.
     LoggedIn,
+    /// Someone has either received or lost moderator status to a channel.
+    Moderator { nick: String, channel: String, status: ModStatus },
 }
 
 impl Message {
@@ -115,6 +123,18 @@ impl Message {
             "PING"   => Ok(Ping(string.after("PING ")?)),
             "NOTICE" => Ok(Notice(string.after(" :")?)),
             "004"    => Ok(LoggedIn),
+            // Someone received / lost moderator status
+            "MODE"   => Ok(
+                Moderator {
+                    nick:    string.after("o ")?,
+                    channel: string.between("#", " ")?,
+                    status:
+                        match string.either("+o", "-o")? {
+                            EitherResult::First  => ModStatus::Received,
+                            EitherResult::Second => ModStatus::Lost,
+                        }
+                }
+            ),
             _        => Err(MessageError::UnknownCode(code)),
         }
     }

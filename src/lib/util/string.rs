@@ -1,3 +1,9 @@
+#[derive(Debug, PartialEq)]
+pub enum EitherResult {
+    First,
+    Second,
+}
+
 /// A collection of miscellaneous methods for `&str`.
 pub trait StrUtil {
     /// Returns a `String` between `delim_a` and `delim_b`.
@@ -21,6 +27,21 @@ pub trait StrUtil {
     /// println!("{:?}", ":garbage :selected_string".after(" :"));
     /// ```
     fn after(&self, delim: &str) -> Result<String, String>;
+
+    /// Looks for `a` and `b` in a string and returns the first one that is there.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use twirc::util::string::{StrUtil, EitherResult};
+    ///
+    /// let x = "test +o test";
+    /// let y = "test -o test";
+    ///
+    /// assert_eq!(x.either("+o", "-o"), Ok(EitherResult::First));
+    /// assert_eq!(y.either("+o", "-o"), Ok(EitherResult::Second));
+    /// ```
+    fn either(&self, a: &str, b: &str) -> Result<EitherResult, String>;
 }
 
 impl StrUtil for str {
@@ -45,5 +66,13 @@ impl StrUtil for str {
         .find(delim)
         .map(|i| self[i + delim.len()..].to_string())
         .ok_or(format!("util::string::after(): string delimiter \"{}\" not found", delim))
+    }
+
+    fn either(&self, a: &str, b: &str) -> Result<EitherResult, String> {
+        self
+        .find(a)
+        .map(|_| EitherResult::First)
+        .or_else(|| self.find(b).map(|_| EitherResult::Second))
+        .ok_or(format!("util::string::either(): unable to find \"{}\" or \"{}\"", a, b))
     }
 }
