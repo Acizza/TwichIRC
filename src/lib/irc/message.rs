@@ -140,7 +140,7 @@ impl Message {
                         }
                 }
             ),
-            _        => Err(MessageError::UnknownCode(code)),
+            _ => Err(MessageError::UnknownCode(code)),
         }
     }
 }
