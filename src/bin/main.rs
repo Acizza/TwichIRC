@@ -1,17 +1,18 @@
 extern crate twirc;
 
+mod ui;
+
 use std::env;
 use std::io::BufRead;
 use twirc::irc::message::Message;
 use twirc::irc::Connection;
+use ui::UI;
 
-fn read_incoming(conn: Connection) {
+fn read_incoming(conn: Connection, ui: &UI) {
     for line in conn.reader.lines() {
         let line = line.expect("failed to read line");
-        println!("{}\n^ {:?}", line, Message::parse(&line));
+        ui.chat.add_message(&format!("{:?}", Message::parse(&line)));
     }
-
-    println!("connection ended");
 }
 
 fn main() {
@@ -25,11 +26,10 @@ fn main() {
     let mut conn = Connection::new("irc.chat.twitch.tv:6667").unwrap();
     conn.login(&nick, &oauth).unwrap();
 
-    println!("connected & logged in");
-
     for channel in channels {
         conn.write_line(&format!("JOIN #{}", channel)).unwrap();
     }
 
-    read_incoming(conn);
+    let ui = UI::create();
+    read_incoming(conn, &ui);
 }

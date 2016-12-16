@@ -13,3 +13,4 @@ path = "src/bin/main.rs"
 doc  = false
 
 [dependencies]
+ncurses = "5.*"
