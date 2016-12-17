@@ -35,13 +35,6 @@ impl Window {
     fn new(id: WINDOW) -> Window {
         Window { id: id }
     }
-
-    fn get_size_raw(window: WINDOW) -> Size {
-        let mut x = 0;
-        let mut y = 0;
-        getmaxyx(window, &mut y, &mut x);
-        Size::new(x, y)
-    }
 }
 
 impl Drop for Window {
@@ -157,7 +150,7 @@ impl UI {
         noecho();
         curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
 
-        let term_size = Window::get_size_raw(stdscr());
+        let term_size = UI::get_size_raw(stdscr());
 
         UI {
             chat:          Chat::new(term_size),
@@ -165,6 +158,13 @@ impl UI {
             channel_list:  UI::create_channel_list(term_size),
             channel_stats: UI::create_channel_stats(term_size),
         }
+    }
+
+    fn get_size_raw(window: WINDOW) -> Size {
+        let mut x = 0;
+        let mut y = 0;
+        getmaxyx(window, &mut y, &mut x);
+        Size::new(x, y)
     }
 }
 
