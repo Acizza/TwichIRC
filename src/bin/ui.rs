@@ -26,9 +26,10 @@ pub struct Window {
     id: WINDOW
 }
 
-// This must be marked as unsafe because we're dealing with a raw pointer.
+// These trait implementations must be marked as unsafe because we're dealing with a raw pointer.
 // While ncurses is NOT thread safe, there (hopefully) shouldn't be any issues in this program's use case.
 unsafe impl Send for Window {}
+unsafe impl Sync for Window {}
 
 impl Window {
     fn new(id: WINDOW) -> Window {
@@ -82,21 +83,54 @@ impl Chat {
     }
 }
 
+pub struct CommandEntry {
+    parent: Window,
+    child:  Window,
+}
+
+impl CommandEntry {
+    fn new(size: Size) -> CommandEntry {
+        let parent = newwin(CMD_ENTRY_HEIGHT,
+                            size.width,
+                            size.height - CMD_ENTRY_HEIGHT,
+                            0);
+        box_(parent, 0, 0);
+        wrefresh(parent);
+
+        let child = derwin(parent,
+                           CMD_ENTRY_HEIGHT - 2,
+                           size.width - 2,
+                           1,
+                           1);
+        scrollok(child, true);
+
+        CommandEntry {
+            parent: Window::new(parent),
+            child:  Window::new(child),
+        }
+    }
+
+    pub fn read_input_char(&self) -> Option<char> {
+        match wgetch(self.child.id) {
+            -1 => None,
+            i  => ::std::char::from_u32(i as u32),
+        }
+    }
+
+    pub fn add_char(&self, ch: char) {
+        wprintw(self.child.id, &ch.to_string());
+        wrefresh(self.child.id);
+    }
+}
+
 pub struct UI {
     pub chat:          Chat,
-    pub command_entry: Window,
+    pub command_entry: CommandEntry,
     pub channel_list:  Window,
     pub channel_stats: Window,
 }
 
 impl UI {
-    fn create_command_entry(size: Size) -> Window {
-        let w = newwin(CMD_ENTRY_HEIGHT, size.width, size.height - CMD_ENTRY_HEIGHT, 0);
-        box_(w, 0, 0);
-        wrefresh(w);
-        Window::new(w)
-    }
-
     fn create_channel_list(size: Size) -> Window {
         let w = newwin(size.height - STATS_PANEL_HEIGHT - CMD_ENTRY_HEIGHT,
                        RIGHT_PANEL_WIDTH,
@@ -120,22 +154,16 @@ impl UI {
     pub fn create() -> UI {
         initscr();
         start_color();
+        noecho();
         curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
 
         let term_size = Window::get_size_raw(stdscr());
 
         UI {
             chat:          Chat::new(term_size),
-            command_entry: UI::create_command_entry(term_size),
+            command_entry: CommandEntry::new(term_size),
             channel_list:  UI::create_channel_list(term_size),
             channel_stats: UI::create_channel_stats(term_size),
-        }
-    }
-
-    pub fn read_input() -> Option<char> {
-        match getch() {
-            -1 => None,
-            i  => ::std::char::from_u32(i as u32),
         }
     }
 }
