@@ -49,7 +49,7 @@ fn handle_events(rx: Receiver<MsgSource>, ui: &Arc<UI>) {
     loop {
         match rx.recv().unwrap() {
             IRC(line)    => ui.chat.add_message(&format!("{:?}", Message::parse(&line))),
-            Terminal(ch) => ui.command_entry.add_char(ch),
+            Terminal(ch) => ui.command_entry.process_char(ch),
         }
     }
 }

@@ -25,6 +25,21 @@ impl Size {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct Position {
+    x: i32,
+    y: i32,
+}
+
+impl Position {
+    pub fn new(x: i32, y: i32) -> Position {
+        Position {
+            x: x,
+            y: y,
+        }
+    }
+}
+
 // Wrapping the raw ncurses window pointer in a struct will allow us to send it across threads.
 pub struct Window {
     id: WINDOW
@@ -78,10 +93,11 @@ impl UI {
     pub fn create() -> UI {
         initscr();
         start_color();
+
         noecho();
         curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
 
-        let term_size = UI::get_size_raw(stdscr());
+        let term_size = get_window_size(stdscr());
 
         UI {
             chat:          Chat::new(term_size),
@@ -90,17 +106,24 @@ impl UI {
             channel_stats: UI::create_channel_stats(term_size),
         }
     }
-
-    fn get_size_raw(window: WINDOW) -> Size {
-        let mut x = 0;
-        let mut y = 0;
-        getmaxyx(window, &mut y, &mut x);
-        Size::new(x, y)
-    }
 }
 
 impl Drop for UI {
     fn drop(&mut self) {
         endwin();
     }
+}
+
+fn get_window_size(window: WINDOW) -> Size {
+    let mut x = 0;
+    let mut y = 0;
+    getmaxyx(window, &mut y, &mut x);
+    Size::new(x, y)
+}
+
+fn get_cursor_pos(window: WINDOW) -> Position {
+    let mut x = 0;
+    let mut y = 0;
+    getyx(window, &mut y, &mut x);
+    Position::new(x, y)
 }
