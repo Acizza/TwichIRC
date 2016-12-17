@@ -1,6 +1,10 @@
 extern crate ncurses;
 
+mod panels;
+
 use self::ncurses::*;
+use self::panels::chat::Chat;
+use self::panels::command_entry::CommandEntry;
 
 pub const RIGHT_PANEL_WIDTH: i32  = 30;
 pub const CMD_ENTRY_HEIGHT: i32   = 3;
@@ -40,79 +44,6 @@ impl Window {
 impl Drop for Window {
     fn drop(&mut self) {
         delwin(self.id);
-    }
-}
-
-pub struct Chat {
-    parent: Window,
-    child:  Window,
-}
-
-impl Chat {
-    fn new(size: Size) -> Chat {
-        let parent = newwin(size.height - CMD_ENTRY_HEIGHT,
-                            size.width - RIGHT_PANEL_WIDTH,
-                            0,
-                            0);
-        box_(parent, 0, 0);
-        wrefresh(parent);
-
-        let child = derwin(parent,
-                           size.height - CMD_ENTRY_HEIGHT - 2,
-                           size.width - RIGHT_PANEL_WIDTH - 2,
-                           1,
-                           1);
-        scrollok(child, true);
-
-        Chat {
-            parent: Window::new(parent),
-            child:  Window::new(child),
-        }
-    }
-
-    pub fn add_message(&self, msg: &str) {
-        wprintw(self.child.id, &format!("{}\n", msg));
-        wrefresh(self.child.id);
-    }
-}
-
-pub struct CommandEntry {
-    parent: Window,
-    child:  Window,
-}
-
-impl CommandEntry {
-    fn new(size: Size) -> CommandEntry {
-        let parent = newwin(CMD_ENTRY_HEIGHT,
-                            size.width,
-                            size.height - CMD_ENTRY_HEIGHT,
-                            0);
-        box_(parent, 0, 0);
-        wrefresh(parent);
-
-        let child = derwin(parent,
-                           CMD_ENTRY_HEIGHT - 2,
-                           size.width - 2,
-                           1,
-                           1);
-        scrollok(child, true);
-
-        CommandEntry {
-            parent: Window::new(parent),
-            child:  Window::new(child),
-        }
-    }
-
-    pub fn read_input_char(&self) -> Option<char> {
-        match wgetch(self.child.id) {
-            -1 => None,
-            i  => ::std::char::from_u32(i as u32),
-        }
-    }
-
-    pub fn add_char(&self, ch: char) {
-        wprintw(self.child.id, &ch.to_string());
-        wrefresh(self.child.id);
     }
 }
 
