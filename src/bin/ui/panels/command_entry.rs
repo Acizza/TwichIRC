@@ -8,6 +8,13 @@ pub struct CommandEntry {
     child:  Window,
 }
 
+// char::is_control() checks for escape sequences,
+// so we need to use our own version that works with ncurse's keypad() function
+fn is_control_char(ch: char) -> bool {
+    let ch = ch as i32;
+    ch >= KEY_MIN && ch <= KEY_MAX
+}
+
 impl CommandEntry {
     pub fn new(size: Size) -> CommandEntry {
         let parent = newwin(CMD_ENTRY_HEIGHT,
@@ -44,12 +51,15 @@ impl CommandEntry {
     }
 
     pub fn process_char(&self, ch: char) {
-        match ch as i32 {
-            KEY_BACKSPACE => self.backspace_key(),
-            KEY_HOME      => self.move_cursor(0),
-            KEY_DC        => self.delete_key(),
-            KEY_UP | KEY_DOWN => (),
-            _ => { wechochar(self.child.id, ch as u32); },
+        if is_control_char(ch) {
+            match ch as i32 {
+                KEY_BACKSPACE => self.backspace_key(),
+                KEY_HOME      => self.move_cursor(0),
+                KEY_DC        => self.delete_key(),
+                _             => (),
+            }
+        } else {
+            wechochar(self.child.id, ch as u32);
         }
     }
 
@@ -62,7 +72,10 @@ impl CommandEntry {
 
     fn backspace_key(&self) {
         let Position { x, .. } = ui::get_cursor_pos(self.child.id);
-        self.delete_char_at(x - 1);
+
+        if x > 0 {
+            self.delete_char_at(x - 1);
+        }
     }
 
     fn delete_key(&self) {
