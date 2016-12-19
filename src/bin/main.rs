@@ -14,17 +14,27 @@ use std::sync::Arc;
 // Please note that all of this is temporary.
 
 enum MsgSource {
-    IRC(String),
+    IRC(Message),
     Terminal(char),
+    Error(String),
 }
 
 fn handle_irc(tx: &Sender<MsgSource>, conn: Connection) {
     let tx = tx.clone();
+    let mut conn = conn;
 
     thread::spawn(move || {
-        for line in conn.reader.lines() {
-            let line = line.expect("failed to read line");
-            tx.send(MsgSource::IRC(line)).unwrap();
+        loop {
+            let mut line = String::new();
+            conn.reader.read_line(&mut line).unwrap();
+
+            let msg = Message::parse(&line);
+
+            match msg {
+                Ok(Message::Ping(reply)) => conn.write_line(&format!("PONG {}", reply)).unwrap(),
+                Ok(msg)  => tx.send(MsgSource::IRC(msg)).unwrap(),
+                Err(err) => tx.send(MsgSource::Error(format!("{:?}", err))).unwrap(),
+            }
         }
     });
 }
@@ -48,8 +58,9 @@ fn handle_events(rx: Receiver<MsgSource>, ui: &Arc<UI>) {
 
     loop {
         match rx.recv().unwrap() {
-            IRC(line)    => ui.chat.add_message(&format!("{:?}", Message::parse(&line))),
+            IRC(msg)     => ui.chat.add_message(&format!("{:?}", msg)),
             Terminal(ch) => ui.command_entry.process_char(ch),
+            Error(msg)   => ui.chat.add_message(&format!("ERROR: {}", msg)),
         }
     }
 }
