@@ -9,7 +9,7 @@ pub struct CommandEntry {
 }
 
 // char::is_control() checks for escape sequences,
-// so we need to use our own version that works with ncurse's keypad() function
+// so we need to use our own version that works with ncurses' keypad() function
 fn is_control_char(ch: char) -> bool {
     let ch = ch as i32;
     ch >= KEY_MIN && ch <= KEY_MAX
