@@ -1,6 +1,6 @@
 use ui;
 use ui::ncurses::*;
-use ui::{CMD_ENTRY_HEIGHT, Window, Size};
+use ui::{CMD_ENTRY_HEIGHT, Window, Size, Position};
 use std::cmp;
 
 pub struct CommandEntry {
@@ -38,10 +38,15 @@ impl CommandEntry {
         }
     }
 
+    fn move_cursor(&self, x_pos: i32) {
+        wmove(self.child.id, 0, cmp::max(x_pos, 0));
+        wrefresh(self.child.id);
+    }
+
     pub fn process_char(&self, ch: char) {
         match ch as i32 {
             KEY_BACKSPACE => self.backspace_key(),
-            KEY_HOME      => { wmove(self.child.id, 0, 0); },
+            KEY_HOME      => self.move_cursor(0),
             KEY_DC        => self.delete_key(),
             KEY_UP | KEY_DOWN => (),
             _ => { wechochar(self.child.id, ch as u32); },
@@ -49,24 +54,19 @@ impl CommandEntry {
     }
 
     fn delete_char_at(&self, index: i32) {
-        let old_pos = ui::get_cursor_pos(self.child.id);
-
-        wmove(self.child.id, 0, cmp::max(index, 0));
+        self.move_cursor(index);
+        
         wdelch(self.child.id);
-        wmove(self.child.id, 0, old_pos.x - 1);
         wrefresh(self.child.id);
     }
 
     fn backspace_key(&self) {
-        let pos = ui::get_cursor_pos(self.child.id);
-
-        if pos.x > 0 {
-            self.delete_char_at(pos.x - 1);
-        }
+        let Position { x, .. } = ui::get_cursor_pos(self.child.id);
+        self.delete_char_at(x - 1);
     }
 
     fn delete_key(&self) {
-        let pos = ui::get_cursor_pos(self.child.id);
-        self.delete_char_at(pos.x);
+        let Position { x, .. } = ui::get_cursor_pos(self.child.id);
+        self.delete_char_at(x);
     }
 }
