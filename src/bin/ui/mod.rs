@@ -5,6 +5,7 @@ mod panels;
 use self::ncurses::*;
 use self::panels::chat::Chat;
 use self::panels::command_entry::CommandEntry;
+use self::panels::channel_list::ChannelList;
 
 pub const RIGHT_PANEL_WIDTH: i32  = 30;
 pub const CMD_ENTRY_HEIGHT: i32   = 3;
@@ -65,21 +66,11 @@ impl Drop for Window {
 pub struct UI {
     pub chat:          Chat,
     pub command_entry: CommandEntry,
-    pub channel_list:  Window,
+    pub channel_list:  ChannelList,
     pub channel_stats: Window,
 }
 
 impl UI {
-    fn create_channel_list(size: Size) -> Window {
-        let w = newwin(size.height - STATS_PANEL_HEIGHT - CMD_ENTRY_HEIGHT,
-                       RIGHT_PANEL_WIDTH,
-                       0,
-                       size.width - RIGHT_PANEL_WIDTH);
-        box_(w, 0, 0);
-        wrefresh(w);
-        Window::new(w)
-    }
-
     fn create_channel_stats(size: Size) -> Window {
         let w = newwin(STATS_PANEL_HEIGHT,
                        RIGHT_PANEL_WIDTH,
@@ -102,7 +93,7 @@ impl UI {
         UI {
             chat:          Chat::new(term_size),
             command_entry: CommandEntry::new(term_size),
-            channel_list:  UI::create_channel_list(term_size),
+            channel_list:  ChannelList::new(term_size),
             channel_stats: UI::create_channel_stats(term_size),
         }
     }
