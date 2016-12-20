@@ -1,11 +1,11 @@
 use ui;
 use ui::ncurses::*;
-use ui::{CMD_ENTRY_HEIGHT, Window, Size, Position};
+use ui::{CMD_ENTRY_HEIGHT, Size, Position};
+use ui::window::BorderWindow;
 use std::cmp;
 
 pub struct CommandEntry {
-    parent: Window,
-    child:  Window,
+    window: BorderWindow
 }
 
 // char::is_control() checks for escape sequences,
@@ -17,37 +17,27 @@ fn is_control_char(ch: char) -> bool {
 
 impl CommandEntry {
     pub fn new(size: Size) -> CommandEntry {
-        let parent = newwin(CMD_ENTRY_HEIGHT,
-                            size.width,
-                            size.height - CMD_ENTRY_HEIGHT,
-                            0);
-        box_(parent, 0, 0);
-        wrefresh(parent);
+        let window = BorderWindow::new(
+                        Position::new(0, size.height - CMD_ENTRY_HEIGHT),
+                        Size::new(size.width, CMD_ENTRY_HEIGHT),
+                        Size::new(1, 1));
+        
+        scrollok(window.inner.id, true);
+        keypad(window.inner.id, true);
 
-        let child = derwin(parent,
-                           CMD_ENTRY_HEIGHT - 2,
-                           size.width - 2,
-                           1,
-                           1);
-        scrollok(child, true);
-        keypad(child, true);
-
-        CommandEntry {
-            parent: Window::new(parent),
-            child:  Window::new(child),
-        }
+        CommandEntry { window: window }
     }
 
     pub fn read_input_char(&self) -> Option<char> {
-        match wgetch(self.child.id) {
+        match wgetch(self.window.inner.id) {
             -1 => None,
             i  => ::std::char::from_u32(i as u32),
         }
     }
 
     fn move_cursor(&self, x_pos: i32) {
-        wmove(self.child.id, 0, cmp::max(x_pos, 0));
-        wrefresh(self.child.id);
+        wmove(self.window.inner.id, 0, cmp::max(x_pos, 0));
+        wrefresh(self.window.inner.id);
     }
 
     pub fn process_char(&self, ch: char) {
@@ -59,19 +49,19 @@ impl CommandEntry {
                 _             => (),
             }
         } else {
-            wechochar(self.child.id, ch as u32);
+            wechochar(self.window.inner.id, ch as u32);
         }
     }
 
     fn delete_char_at(&self, index: i32) {
         self.move_cursor(index);
         
-        wdelch(self.child.id);
-        wrefresh(self.child.id);
+        wdelch(self.window.inner.id);
+        wrefresh(self.window.inner.id);
     }
 
     fn backspace_key(&self) {
-        let Position { x, .. } = ui::get_cursor_pos(self.child.id);
+        let Position { x, .. } = ui::get_cursor_pos(self.window.inner.id);
 
         if x > 0 {
             self.delete_char_at(x - 1);
@@ -79,7 +69,7 @@ impl CommandEntry {
     }
 
     fn delete_key(&self) {
-        let Position { x, .. } = ui::get_cursor_pos(self.child.id);
+        let Position { x, .. } = ui::get_cursor_pos(self.window.inner.id);
         self.delete_char_at(x);
     }
 }

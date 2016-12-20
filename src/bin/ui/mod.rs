@@ -1,11 +1,14 @@
 extern crate ncurses;
 
 mod panels;
+mod window;
 
 use self::ncurses::*;
 use self::panels::chat::Chat;
 use self::panels::command_entry::CommandEntry;
 use self::panels::channel_list::ChannelList;
+
+use self::window::Window;
 
 pub const RIGHT_PANEL_WIDTH: i32  = 30;
 pub const CMD_ENTRY_HEIGHT: i32   = 3;
@@ -38,28 +41,6 @@ impl Position {
             x: x,
             y: y,
         }
-    }
-}
-
-// Wrapping the raw ncurses window pointer in a struct will allow us to send it across threads.
-pub struct Window {
-    id: WINDOW
-}
-
-// These trait implementations must be marked as unsafe because we're dealing with a raw pointer.
-// While ncurses is NOT thread safe, there (hopefully) shouldn't be any issues in this program's use case.
-unsafe impl Send for Window {}
-unsafe impl Sync for Window {}
-
-impl Window {
-    fn new(id: WINDOW) -> Window {
-        Window { id: id }
-    }
-}
-
-impl Drop for Window {
-    fn drop(&mut self) {
-        delwin(self.id);
     }
 }
 
