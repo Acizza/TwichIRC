@@ -34,7 +34,7 @@ impl Chat {
     }
 
     pub fn add_message(&self, msg: &str) {
-        wprintw(self.child.id, &sanitize(&format!("{}\n", msg)));
+        wprintw(self.child.id, &format!("{}\n", sanitize(msg)));
         wrefresh(self.child.id);
     }
 }
