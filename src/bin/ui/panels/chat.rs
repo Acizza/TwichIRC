@@ -6,6 +6,11 @@ pub struct Chat {
     child:  Window,
 }
 
+// glibc will panic if a message containing a C-style format string is entered
+fn sanitize(string: &str) -> String {
+    string.replace('%', "%%")
+}
+
 impl Chat {
     pub fn new(size: Size) -> Chat {
         let parent = newwin(size.height - CMD_ENTRY_HEIGHT,
@@ -29,7 +34,7 @@ impl Chat {
     }
 
     pub fn add_message(&self, msg: &str) {
-        wprintw(self.child.id, &format!("{}\n", msg));
+        wprintw(self.child.id, &sanitize(&format!("{}\n", msg)));
         wrefresh(self.child.id);
     }
 }
