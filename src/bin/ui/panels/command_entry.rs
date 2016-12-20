@@ -23,16 +23,8 @@ impl CommandEntry {
                         Size::new(1, 1));
         
         scrollok(window.inner.id, true);
-        keypad(window.inner.id, true);
 
         CommandEntry { window: window }
-    }
-
-    pub fn read_input_char(&self) -> Option<char> {
-        match wgetch(self.window.inner.id) {
-            -1 => None,
-            i  => ::std::char::from_u32(i as u32),
-        }
     }
 
     fn move_cursor(&self, x_pos: i32) {

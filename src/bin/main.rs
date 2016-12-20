@@ -9,7 +9,6 @@ use twirc::irc::message::Message;
 use twirc::irc::Connection;
 use ui::UI;
 use std::sync::mpsc::{channel, Sender, Receiver};
-use std::sync::Arc;
 
 // Please note that all of this is temporary.
 
@@ -39,13 +38,12 @@ fn handle_irc(tx: &Sender<MsgSource>, conn: Connection) {
     });
 }
 
-fn handle_terminal(tx: &Sender<MsgSource>, ui: &Arc<UI>) {
+fn handle_terminal(tx: &Sender<MsgSource>) {
     let tx = tx.clone();
-    let ui = ui.clone();
 
     thread::spawn(move || {
         loop {
-            match ui.command_entry.read_input_char() {
+            match UI::read_char() {
                 Some(ch) => tx.send(MsgSource::Terminal(ch)).unwrap(),
                 None     => (),
             }
@@ -53,13 +51,13 @@ fn handle_terminal(tx: &Sender<MsgSource>, ui: &Arc<UI>) {
     });
 }
 
-fn handle_events(rx: Receiver<MsgSource>, ui: &Arc<UI>) {
+fn handle_events(rx: Receiver<MsgSource>, ui: &UI) {
     use MsgSource::*;
 
     loop {
         match rx.recv().unwrap() {
             IRC(msg)     => ui.chat.add_message(&format!("{:?}", msg)),
-            Terminal(ch) => ui.command_entry.process_char(ch),
+            Terminal(ch) => ui.process_char(ch),
             Error(msg)   => ui.chat.add_message(&format!("ERROR: {}", msg)),
         }
     }
@@ -79,11 +77,11 @@ fn main() {
         conn.write_line(&format!("JOIN #{}", channel)).unwrap();
     }
 
-    let ui = Arc::new(UI::create());
+    let ui = UI::create();
     let (tx, rx) = channel();
 
     handle_irc(&tx, conn);
-    handle_terminal(&tx, &ui);
+    handle_terminal(&tx);
 
     handle_events(rx, &ui);
 }

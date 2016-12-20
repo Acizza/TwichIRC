@@ -68,6 +68,10 @@ impl UI {
 
         noecho();
         curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
+        keypad(stdscr(), true);
+
+        // Manually refresh stdscr now to prevent it from overwriting other windows later on
+        refresh();
 
         let term_size = get_window_size(stdscr());
 
@@ -77,6 +81,17 @@ impl UI {
             channel_list:  ChannelList::new(term_size),
             channel_stats: UI::create_channel_stats(term_size),
         }
+    }
+
+    pub fn read_char() -> Option<char> {
+        match getch() {
+            -1 => None,
+            i  => ::std::char::from_u32(i as u32),
+        }
+    }
+
+    pub fn process_char(&self, ch: char) {
+        self.command_entry.process_char(ch);
     }
 }
 
