@@ -73,7 +73,7 @@ impl UI {
         // Manually refresh stdscr now to prevent it from overwriting other windows later on
         refresh();
 
-        let term_size = get_window_size(stdscr());
+        let term_size = window::get_size(stdscr());
 
         UI {
             chat:          Chat::new(term_size),
@@ -99,18 +99,4 @@ impl Drop for UI {
     fn drop(&mut self) {
         endwin();
     }
-}
-
-fn get_window_size(window: WINDOW) -> Size {
-    let mut x = 0;
-    let mut y = 0;
-    getmaxyx(window, &mut y, &mut x);
-    Size::new(x, y)
-}
-
-fn get_cursor_pos(window: WINDOW) -> Position {
-    let mut x = 0;
-    let mut y = 0;
-    getyx(window, &mut y, &mut x);
-    Position::new(x, y)
 }

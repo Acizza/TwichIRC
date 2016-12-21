@@ -46,3 +46,17 @@ impl BorderWindow {
         }
     }
 }
+
+pub fn get_size(window: WINDOW) -> Size {
+    let mut x = 0;
+    let mut y = 0;
+    getmaxyx(window, &mut y, &mut x);
+    Size::new(x, y)
+}
+
+pub fn get_cursor_pos(window: WINDOW) -> Position {
+    let mut x = 0;
+    let mut y = 0;
+    getyx(window, &mut y, &mut x);
+    Position::new(x, y)
+}

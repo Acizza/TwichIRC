@@ -1,7 +1,6 @@
-use ui;
 use ui::ncurses::*;
 use ui::{CMD_ENTRY_HEIGHT, Size, Position};
-use ui::window::BorderWindow;
+use ui::window::{BorderWindow, get_cursor_pos};
 use std::cmp;
 
 pub struct CommandEntry {
@@ -53,7 +52,7 @@ impl CommandEntry {
     }
 
     fn backspace_key(&self) {
-        let Position { x, .. } = ui::get_cursor_pos(self.window.inner.id);
+        let Position { x, .. } = get_cursor_pos(self.window.inner.id);
 
         if x > 0 {
             self.delete_char_at(x - 1);
@@ -61,7 +60,7 @@ impl CommandEntry {
     }
 
     fn delete_key(&self) {
-        let Position { x, .. } = ui::get_cursor_pos(self.window.inner.id);
+        let Position { x, .. } = get_cursor_pos(self.window.inner.id);
         self.delete_char_at(x);
     }
 }
