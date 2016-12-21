@@ -3,7 +3,6 @@ extern crate twirc;
 mod ui;
 
 use std::env;
-use std::io::BufRead;
 use std::thread;
 use twirc::irc::message::Message;
 use twirc::irc::Connection;
@@ -24,12 +23,7 @@ fn handle_irc(tx: &Sender<MsgSource>, conn: Connection) {
 
     thread::spawn(move || {
         loop {
-            let mut line = String::new();
-            conn.reader.read_line(&mut line).unwrap();
-
-            let msg = Message::parse(&line);
-
-            match msg {
+            match conn.read_line() {
                 Ok(Message::Ping(reply)) => conn.write_line(&format!("PONG {}", reply)).unwrap(),
                 Ok(msg)  => tx.send(MsgSource::IRC(msg)).unwrap(),
                 Err(err) => tx.send(MsgSource::Error(format!("{:?}", err))).unwrap(),
