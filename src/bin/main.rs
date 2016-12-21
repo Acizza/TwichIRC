@@ -70,14 +70,16 @@ fn main() {
     let oauth = args.next().unwrap();
     let channels = args.collect::<Vec<_>>();
 
+    let mut ui = UI::create();
+
     let mut conn = Connection::new("irc.chat.twitch.tv:6667").unwrap();
     conn.login(&nick, &oauth).unwrap();
 
     for channel in channels {
         conn.write_line(&format!("JOIN #{}", channel)).unwrap();
+        ui.channel_list.add_channel(&channel);
     }
 
-    let ui = UI::create();
     let (tx, rx) = channel();
 
     handle_irc(&tx, conn);
