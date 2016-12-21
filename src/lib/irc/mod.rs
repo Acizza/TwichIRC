@@ -60,9 +60,8 @@ impl Connection {
     /// Reads a line from the server and parses a [`Message`] from it.
     /// [`Message`]: message/enum.Message.html
     pub fn read_line(&mut self) -> Result<Message, ReadLineError> {
-        match self.read_line_raw() {
-            Ok(line) => Message::parse(&line).map_err(ReadLineError::Message),
-            Err(err) => Err(ReadLineError::Connection(err)),
-        }
+        self.read_line_raw()
+            .map_err(ReadLineError::Connection)
+            .and_then(|line| Message::parse(&line).map_err(ReadLineError::Message))
     }
 }
