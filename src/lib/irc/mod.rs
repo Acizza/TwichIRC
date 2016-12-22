@@ -5,6 +5,35 @@ use std::io;
 use std::io::{BufReader, Write, BufRead, Error};
 use irc::message::{Message, MessageError};
 
+/// Contains methods that handle common IRC functionality.
+pub trait Irc {
+    /// Sends login credentials to the server.
+    fn login(&mut self, username: &str, oauth: &str) -> Result<(), io::Error>;
+}
+
+impl Irc for TcpStream {
+    fn login(&mut self, username: &str, oauth: &str) -> Result<(), io::Error> {
+        writeln!(self, "USER {} 0 * :{}", username, username)?;
+        writeln!(self, "PASS {}", oauth)?;
+        writeln!(self, "NICK {}", username)?;
+        writeln!(self, "CAP REQ :twitch.tv/membership")?;
+
+        Ok(())
+    }
+}
+
+pub trait StreamUtil {
+    /// Sends a `&str` to the server immediately.
+    fn send_line(&mut self, string: &str) -> Result<(), io::Error>;
+}
+
+impl StreamUtil for TcpStream {
+   fn send_line(&mut self, string: &str) -> Result<(), io::Error> {
+        writeln!(self, "{}", string)?;
+        self.flush()
+    }
+}
+
 /// Represents an error caused by reading a [`Message`] from the server.
 /// [`Message`]: message/enum.Message.html
 #[derive(Debug)]
@@ -15,51 +44,24 @@ pub enum ReadLineError {
     Message(MessageError),
 }
 
-/// Represents a TCP connection to an IRC server.
-pub struct Connection {
-    /// Utility field to allow easy reading from the server.
-    reader: BufReader<TcpStream>,
+pub trait ReaderUtil {    
+    /// Reads a line directly from the connected server.
+    fn read_line_raw(&mut self) -> Result<String, Error>;
+
+    /// Reads a line from the server and parses a [`Message`] from it.
+    /// [`Message`]: message/enum.Message.html
+    fn read_message(&mut self) -> Result<Message, ReadLineError>;
 }
 
-impl Connection {
-    /// Connects to the specified IRC server.
-    pub fn new(host: &str) -> Result<Connection, io::Error> {
-        let socket = TcpStream::connect(host)?;
-        Ok(Connection {
-            reader: BufReader::new(socket)
-        })
-    }
-
-    /// Sends login credentials to the IRC server.
-    pub fn login(&mut self, username: &str, oauth: &str) -> Result<(), io::Error> {
-        let mut socket = self.reader.get_mut();
-
-        writeln!(socket, "USER {} 0 * :{}", username, username)?;
-        writeln!(socket, "PASS {}", oauth)?;
-        writeln!(socket, "NICK {}", username)?;
-        writeln!(socket, "CAP REQ :twitch.tv/membership")?;
-
-        Ok(())
-    }
-
-    /// Sends a `&str` to the IRC server immediately.
-    pub fn write_line(&mut self, string: &str) -> Result<(), io::Error> {
-        let socket = self.reader.get_mut();
-        writeln!(socket, "{}", string)?;
-        socket.flush()
-    }
-
-    /// Reads a line directly from the connected server.
-    pub fn read_line_raw(&mut self) -> Result<String, Error> {
+impl ReaderUtil for BufReader<TcpStream> {
+    fn read_line_raw(&mut self) -> Result<String, Error> {
         let mut line = String::new();
-        self.reader.read_line(&mut line)?;
+        self.read_line(&mut line)?;
 
         Ok(line)
     }
 
-    /// Reads a line from the server and parses a [`Message`] from it.
-    /// [`Message`]: message/enum.Message.html
-    pub fn read_line(&mut self) -> Result<Message, ReadLineError> {
+    fn read_message(&mut self) -> Result<Message, ReadLineError> {
         self.read_line_raw()
             .map_err(ReadLineError::Connection)
             .and_then(|line| Message::parse(&line).map_err(ReadLineError::Message))

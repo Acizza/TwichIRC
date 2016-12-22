@@ -4,10 +4,12 @@ mod ui;
 
 use std::env;
 use std::thread;
-use twirc::irc::message::Message;
-use twirc::irc::Connection;
-use ui::UI;
+use std::net::TcpStream;
+use std::io::{BufReader, Write};
 use std::sync::mpsc::{channel, Sender, Receiver};
+use twirc::irc::message::Message;
+use twirc::irc::{Irc, StreamUtil, ReaderUtil};
+use ui::UI;
 
 // Please note that all of this is temporary.
 
@@ -17,14 +19,12 @@ enum MsgSource {
     Error(String),
 }
 
-fn handle_irc(tx: &Sender<MsgSource>, conn: Connection) {
+fn handle_irc(tx: &Sender<MsgSource>, mut reader: BufReader<TcpStream>) {
     let tx = tx.clone();
-    let mut conn = conn;
 
     thread::spawn(move || {
         loop {
-            match conn.read_line() {
-                Ok(Message::Ping(reply)) => conn.write_line(&format!("PONG {}", reply)).unwrap(),
+            match reader.read_message() {
                 Ok(msg)  => tx.send(MsgSource::IRC(msg)).unwrap(),
                 Err(err) => tx.send(MsgSource::Error(format!("{:?}", err))).unwrap(),
             }
@@ -45,12 +45,17 @@ fn handle_terminal(tx: &Sender<MsgSource>) {
     });
 }
 
-fn handle_events(rx: Receiver<MsgSource>, ui: &UI) {
+fn handle_events(rx: Receiver<MsgSource>, ui: &UI, mut writer: TcpStream) {
     use MsgSource::*;
 
     loop {
         match rx.recv().unwrap() {
-            IRC(msg)     => ui.chat.add_message(&format!("{:?}", msg)),
+            IRC(msg) => {
+                match msg {
+                    Message::Ping(reply) => writeln!(writer, "PONG {}", reply).unwrap(),
+                    msg => ui.chat.add_message(&format!("{:?}", msg)),
+                }
+            },
             Terminal(ch) => ui.process_char(ch),
             Error(msg)   => ui.chat.add_message(&format!("ERROR: {}", msg)),
         }
@@ -66,18 +71,19 @@ fn main() {
 
     let mut ui = UI::create();
 
-    let mut conn = Connection::new("irc.chat.twitch.tv:6667").unwrap();
+    let mut conn = TcpStream::connect("irc.chat.twitch.tv:6667").unwrap();
     conn.login(&nick, &oauth).unwrap();
 
     for channel in channels {
-        conn.write_line(&format!("JOIN #{}", channel)).unwrap();
+        conn.send_line(&format!("JOIN #{}", channel)).unwrap();
         ui.channel_list.add_channel(&channel);
     }
 
     let (tx, rx) = channel();
 
-    handle_irc(&tx, conn);
+    let conn_clone = conn.try_clone().unwrap();
+    handle_irc(&tx, BufReader::new(conn));
     handle_terminal(&tx);
 
-    handle_events(rx, &ui);
+    handle_events(rx, &ui, conn_clone);
 }
